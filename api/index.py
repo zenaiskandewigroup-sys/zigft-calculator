@@ -165,6 +165,4 @@ def index():
             result = calculate_sl_tp(pair, side, entry, rr)
     return render_template_string(HTML, result=result)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=2000)
-
+app = app
