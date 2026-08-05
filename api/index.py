@@ -1,6 +1,34 @@
 from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
+@app.route('/manifest.json')
+def manifest():
+    return {
+        "background_color": "#0a0a0a",
+        "dir": "ltr",
+        "display": "standalone",
+        "name": "ZIGFT calculator",
+        "orientation": "portrait",
+        "scope": "/",
+        "short_name": "ZIGFT",
+        "start_url": "/",
+        "theme_color": "#0a0a0a",
+        "id": "/",
+        "description": "Professional Entry, Stop Loss, and Take Profit calculator for Trader Family analysts to simplify market analysis.",
+        "lang": "id",
+        "categories": [
+            "finance"
+        ],
+        "icons": [
+            {
+                "src": "https://raw.githubusercontent.com/zenaiskandewigroup-sys/zigft-calculator/main/icon.png",
+                "sizes": "512x512",
+                "type": "image/png",
+                "purpose": "any maskable"
+            }
+        ]
+    }
+
 
 HTML = """
 <!DOCTYPE html>
