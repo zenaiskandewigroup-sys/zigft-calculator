@@ -6,6 +6,7 @@ HTML = """
 <!DOCTYPE html>
 <html lang="id">
 <head>
+  <link rel="manifest" href="/manifest.json">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trader Family Auto Price v9.0</title>
