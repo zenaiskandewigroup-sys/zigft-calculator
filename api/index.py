@@ -28,6 +28,18 @@ def manifest():
             }
         ]
     }
+@app.route('/.well-known/assetlinks.json')
+def assetlinks():
+    return [{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "app.vercel.zigft_calculator.twa",
+            "sha256_cert_fingerprints": [
+                "18:5B:EE:A9:AA:8C:84:0D:79:F7:36:E9:23:32:4A:D6:D7:57:5E:6F:39:0A:CB:14:29:E1:EC:1C:27:EB:E9:7F"
+            ]
+        }
+    }]
 
 
 HTML = """
