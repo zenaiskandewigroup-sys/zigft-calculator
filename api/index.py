@@ -201,7 +201,7 @@ HTML = """
     <div class="dashboard-card">
       <div class="header">
         <h3>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           Auto Price v9.0
         </h3>
         <p>RR Smart Mode | TF Official System 2025 | Auto Value Pair</p>
@@ -316,24 +316,12 @@ def calculate_sl_tp(pair, side, entry, rr):
     pv = detect_pip_value(pair, entry)
 
     # ==========================================
-    # LOGIKA BARU: KHUSUS UNTUK XAUUSD (PERMINTAAN USER)
+    # LOGIKA XAUUSD: SL TETAP DI ~166.66 pips (max_sl / 3),
+    # TP MENGIKUTI KELIPATAN RR (1x, 2x, 3x dari SL)
     # ==========================================
     if pair == "XAUUSD":
-        sl_pips = rule["max_sl"] / rr
-        if sl_pips < rule["min_sl"]:
-            sl_pips = rule["min_sl"]
-        if sl_pips > rule["max_sl"]:
-            sl_pips = rule["max_sl"]
-        
-        # Override perhitungan TP
-        if rr == 1:
-            tp_pips = sl_pips * 1   # Jika pilih 1 (RR 1:1), TP x1 dari SL yang sekarang
-        elif rr == 2:
-            tp_pips = sl_pips * 2   # Jika pilih 2 (RR 1:2), TP x2 dari SL yang sekarang
-        elif rr == 3:
-            tp_pips = sl_pips * 3   # Jika pilih 3 (RR 1:3), perhitungan tetap seperti original
-        else:
-            tp_pips = sl_pips * rr  # Fallback untuk nilai desimal lain
+        sl_pips = rule["max_sl"] / 3  # Menghasilkan ~166.66 pips
+        tp_pips = sl_pips * rr        # RR 1 -> 1x SL, RR 2 -> 2x SL, RR 3 -> 3x SL
             
     # ==========================================
     # LOGIKA ORIGINAL: UNTUK PAIR LAINNYA
@@ -387,5 +375,4 @@ def index():
             result = calculate_sl_tp(pair, side, entry, rr)
     return render_template_string(HTML, result=result)
 
-if __name__ == '__main__':
-    app.run(debug=True)
+app = app
