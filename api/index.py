@@ -41,7 +41,7 @@ def assetlinks():
                 "18:5B:EE:A9:AA:8C:84:0D:79:F7:36:E9:23:32:4A:D6:D7:57:5E:6F:39:0A:CB:14:29:E1:EC:1C:27:EB:E9:7F"
             ]
         }
-    }]
+    ]
 
 
 HTML = """
@@ -172,6 +172,33 @@ HTML = """
       font-weight: 600;
       color: var(--text-main);
     }
+
+    /* TAMBAHAN: tombol salin */
+    .copy-btn {
+      margin-top: 10px;
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: #111111;
+      color: #888888;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .copy-btn:hover {
+      background: #1a1a1a;
+      color: #ededed;
+      border-color: #444444;
+    }
+
+    .copy-btn.copied {
+      color: #4caf50;
+      border-color: rgba(76, 175, 80, 0.3);
+    }
+
     .status-badge {
       margin-top: 20px;
       padding: 14px;
@@ -201,7 +228,7 @@ HTML = """
     <div class="dashboard-card">
       <div class="header">
         <h3>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
           Auto Price v9.0
         </h3>
         <p>RR Smart Mode | TF Official System 2025 | Auto Value Pair</p>
@@ -242,21 +269,28 @@ HTML = """
           <div class="data-label">Side / RR</div>
           <div class="data-value">{{ result.side.upper() }} <span style="font-size: 0.9rem; color: #888;">(1:{{ result.rr }})</span></div>
         </div>
+
         <div class="data-item">
           <div class="data-label">Entry</div>
           <div class="data-value">{{ result.entry }}</div>
+          <button type="button" class="copy-btn" onclick="copyPrice('{{ result.entry }}', this)">Salin Entry</button>
         </div>
+
         <div class="data-item">
           <div class="data-label">Value Pair</div>
           <div class="data-value">{{ result.value_pair }}</div>
         </div>
+
         <div class="data-item" style="border-color: rgba(244, 67, 54, 0.3);">
           <div class="data-label" style="color: #f44336;">Stop Loss (SL)</div>
           <div class="data-value">{{ result.sl }} <span style="font-size: 0.8rem; color: #888; font-weight: 400;">(-{{ result.sl_pips }} pips)</span></div>
+          <button type="button" class="copy-btn" onclick="copyPrice('{{ result.sl }}', this)">Salin SL</button>
         </div>
+
         <div class="data-item" style="border-color: rgba(76, 175, 80, 0.3);">
           <div class="data-label" style="color: #4caf50;">Take Profit (TP)</div>
           <div class="data-value">{{ result.tp }} <span style="font-size: 0.8rem; color: #888; font-weight: 400;">(+{{ result.tp_pips }} pips)</span></div>
+          <button type="button" class="copy-btn" onclick="copyPrice('{{ result.tp }}', this)">Salin TP</button>
         </div>
       </div>
       
@@ -276,6 +310,40 @@ HTML = """
 
     <footer>© 2025 MaelFX × Idris Lab | TF 2025 System Integrated</footer>
   </div>
+
+  <!-- TAMBAHAN: fungsi copy harga -->
+  <script>
+    function copyPrice(value, button) {
+      navigator.clipboard.writeText(value).then(function() {
+        const originalText = button.innerText;
+
+        button.innerText = "✓ Tersalin";
+        button.classList.add("copied");
+
+        setTimeout(function() {
+          button.innerText = originalText;
+          button.classList.remove("copied");
+        }, 1500);
+      }).catch(function() {
+        const textArea = document.createElement("textarea");
+        textArea.value = value;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+
+        const originalText = button.innerText;
+
+        button.innerText = "✓ Tersalin";
+        button.classList.add("copied");
+
+        setTimeout(function() {
+          button.innerText = originalText;
+          button.classList.remove("copied");
+        }, 1500);
+      });
+    }
+  </script>
 </body>
 </html>
 """
