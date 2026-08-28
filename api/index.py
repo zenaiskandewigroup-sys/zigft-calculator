@@ -1,10 +1,11 @@
 from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
+
 @app.route('/manifest.json')
 def manifest():
     return {
-        "background_color": "#0a0a0a",
+        "background_color": "#000000",
         "dir": "ltr",
         "display": "standalone",
         "name": "ZIGFT calculator",
@@ -12,7 +13,7 @@ def manifest():
         "scope": "/",
         "short_name": "ZIGFT",
         "start_url": "/",
-        "theme_color": "#0a0a0a",
+        "theme_color": "#000000",
         "id": "/",
         "description": "Professional Entry, Stop Loss, and Take Profit calculator for Trader Family analysts to simplify market analysis.",
         "lang": "id",
@@ -28,6 +29,7 @@ def manifest():
             }
         ]
     }
+
 @app.route('/.well-known/assetlinks.json')
 def assetlinks():
     return [{
@@ -51,26 +53,159 @@ HTML = """
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trader Family Auto Price v9.0</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    body { background: linear-gradient(to bottom, #0a0a0a, #1a1a1a); color: #f8f8f8; font-family: 'Poppins', sans-serif; min-height: 100vh; }
-    .container { max-width: 520px; margin-top: 40px; }
-    .card { background: #111; border: 1px solid #222; border-radius: 16px; padding: 22px; box-shadow: 0 0 10px rgba(0,255,128,0.1); }
-    h3 { color: #28a745; text-align: center; font-weight: 700; margin-bottom: 5px; }
-    p.text-center { color: #00bfff; font-weight: 500; margin-bottom: 15px; }
-    label.form-label { color: #fff !important; font-weight: 500; }
-    input, select { background-color: #222 !important; border: 1px solid #444; color: #fff !important; }
-    input::placeholder { color: #aaa !important; }
-    .btn-success { background: linear-gradient(to right, #00c853, #009624); font-weight: 600; border: none; font-size: 16px; box-shadow: 0 0 6px rgba(0,255,128,0.4); }
-    .btn-success:hover { background: linear-gradient(to right, #00e676, #00c853); }
-    .result-card { background: #f9f9f9; color: #000; border-radius: 16px; padding: 18px; margin-top: 25px; box-shadow: 0 0 12px rgba(0,255,128,0.2); }
-    footer { margin-top: 40px; text-align: center; font-size: 13px; color: #999; }
+    :root {
+      --bg-main: #000000;
+      --bg-card: #0a0a0a;
+      --border: #222222;
+      --border-focus: #444444;
+      --text-main: #ededed;
+      --text-muted: #888888;
+      --accent: #ffffff;
+      --accent-hover: #e0e0e0;
+    }
+    body { 
+      background-color: var(--bg-main); 
+      color: var(--text-main); 
+      font-family: 'Inter', sans-serif; 
+      min-height: 100vh; 
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 15px;
+    }
+    .container { max-width: 520px; width: 100%; }
+    .dashboard-card { 
+      background: var(--bg-card); 
+      border: 1px solid var(--border); 
+      border-radius: 12px; 
+      padding: 32px; 
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6); 
+    }
+    .header { margin-bottom: 28px; }
+    .header h3 { 
+      color: var(--text-main); 
+      font-weight: 700; 
+      font-size: 1.4rem; 
+      margin-bottom: 6px; 
+      display: flex; 
+      align-items: center; 
+      gap: 10px;
+    }
+    .header p { 
+      color: var(--text-muted); 
+      font-size: 0.85rem; 
+      font-weight: 400; 
+      margin: 0; 
+    }
+    .form-label { 
+      color: var(--text-muted) !important; 
+      font-weight: 500; 
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+    .form-control, .form-select { 
+      background-color: var(--bg-main) !important; 
+      border: 1px solid var(--border) !important; 
+      color: var(--text-main) !important; 
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+    .form-control:focus, .form-select:focus { 
+      border-color: var(--border-focus) !important; 
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.05) !important; 
+    }
+    .form-control::placeholder { color: #444 !important; }
+    .btn-submit { 
+      background: var(--accent); 
+      color: #000; 
+      font-weight: 600; 
+      border: none; 
+      font-size: 0.95rem; 
+      padding: 14px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      margin-top: 10px;
+    }
+    .btn-submit:hover { 
+      background: var(--accent-hover); 
+      transform: translateY(-1px);
+    }
+    .result-wrapper { 
+      margin-top: 24px; 
+      background: var(--bg-card); 
+      border: 1px solid var(--border); 
+      border-radius: 12px; 
+      padding: 24px; 
+    }
+    .result-header {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .data-item {
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .data-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .data-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    .status-badge {
+      margin-top: 20px;
+      padding: 14px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .status-valid {
+      background: rgba(40, 167, 69, 0.1);
+      color: #4caf50;
+      border: 1px solid rgba(40, 167, 69, 0.2);
+    }
+    .status-invalid {
+      background: rgba(220, 53, 69, 0.1);
+      color: #f44336;
+      border: 1px solid rgba(220, 53, 69, 0.2);
+    }
+    footer { margin-top: 32px; text-align: center; font-size: 0.8rem; color: #555; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="card">
-      <h3>⚙️ Trader Family Auto Price v9.0</h3>
-      <p class="text-center">RR Smart Mode | TF Official System 2025 | Auto Value Pair</p>
+    <div class="dashboard-card">
+      <div class="header">
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          Auto Price v9.0
+        </h3>
+        <p>RR Smart Mode | TF Official System 2025 | Auto Value Pair</p>
+      </div>
       <form method="POST">
         <div class="mb-3">
           <label class="form-label">Pair</label>
@@ -91,27 +226,49 @@ HTML = """
           <label class="form-label">RR (1 - 3)</label>
           <input type="number" step="0.1" name="rr" class="form-control" placeholder="contoh: 2.5" required>
         </div>
-        <button type="submit" class="btn btn-success w-100">Hitung SL/TP ✅</button>
+        <button type="submit" class="btn btn-submit w-100">Hitung SL/TP</button>
       </form>
     </div>
 
     {% if result %}
-    <div class="result-card">
-      <h5 class="fw-bold text-center mb-3">📊 Hasil Perhitungan</h5>
-      <p><strong>PAIR :</strong> {{ result.pair }}</p>
-      <p><strong>TYPE :</strong> {{ result.side.upper() }}</p>
-      <p><strong>ENTRY :</strong> {{ result.entry }}</p>
-      <p><strong>SL :</strong> {{ result.sl }} (-{{ result.sl_pips }} pips)</p>
-      <p><strong>TP :</strong> {{ result.tp }} (+{{ result.tp_pips }} pips)</p>
-      <p><strong>RR :</strong> 1 : {{ result.rr }}</p>
-      <p><strong>Value Pair :</strong> {{ result.value_pair }}</p>
+    <div class="result-wrapper">
+      <div class="result-header">Hasil Perhitungan</div>
+      <div class="result-grid">
+        <div class="data-item">
+          <div class="data-label">Pair</div>
+          <div class="data-value">{{ result.pair }}</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">Side / RR</div>
+          <div class="data-value">{{ result.side.upper() }} <span style="font-size: 0.9rem; color: #888;">(1:{{ result.rr }})</span></div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">Entry</div>
+          <div class="data-value">{{ result.entry }}</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">Value Pair</div>
+          <div class="data-value">{{ result.value_pair }}</div>
+        </div>
+        <div class="data-item" style="border-color: rgba(244, 67, 54, 0.3);">
+          <div class="data-label" style="color: #f44336;">Stop Loss (SL)</div>
+          <div class="data-value">{{ result.sl }} <span style="font-size: 0.8rem; color: #888; font-weight: 400;">(-{{ result.sl_pips }} pips)</span></div>
+        </div>
+        <div class="data-item" style="border-color: rgba(76, 175, 80, 0.3);">
+          <div class="data-label" style="color: #4caf50;">Take Profit (TP)</div>
+          <div class="data-value">{{ result.tp }} <span style="font-size: 0.8rem; color: #888; font-weight: 400;">(+{{ result.tp_pips }} pips)</span></div>
+        </div>
+      </div>
+      
       {% if result.valid %}
-        <div class="alert alert-success text-center fw-bold mt-3" role="alert">
-          ✅ Valid TF 2025 ({{ result.validation_text }})
+        <div class="status-badge status-valid">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          Valid TF 2025 ({{ result.validation_text }})
         </div>
       {% else %}
-        <div class="alert alert-danger text-center fw-bold mt-3" role="alert">
-          ⚠️ Tidak Valid TF 2025 ({{ result.validation_text }})
+        <div class="status-badge status-invalid">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          Tidak Valid TF 2025 ({{ result.validation_text }})
         </div>
       {% endif %}
     </div>
@@ -158,15 +315,39 @@ def calculate_sl_tp(pair, side, entry, rr):
     rule = TF_RULES.get(pair, {"vp": 1, "min_sl": 20, "max_sl": 200})
     pv = detect_pip_value(pair, entry)
 
-    # SL minimum → RR dikalkulasi otomatis
-    sl_pips = rule["max_sl"] / rr
-    if sl_pips < rule["min_sl"]:
-        sl_pips = rule["min_sl"]
-    if sl_pips > rule["max_sl"]:
-        sl_pips = rule["max_sl"]
+    # ==========================================
+    # LOGIKA BARU: KHUSUS UNTUK XAUUSD (PERMINTAAN USER)
+    # ==========================================
+    if pair == "XAUUSD":
+        sl_pips = rule["max_sl"] / rr
+        if sl_pips < rule["min_sl"]:
+            sl_pips = rule["min_sl"]
+        if sl_pips > rule["max_sl"]:
+            sl_pips = rule["max_sl"]
+        
+        # Override perhitungan TP
+        if rr == 1:
+            tp_pips = sl_pips * 1   # Jika pilih 1 (RR 1:1), TP x1 dari SL yang sekarang
+        elif rr == 2:
+            tp_pips = sl_pips * 2   # Jika pilih 2 (RR 1:2), TP x2 dari SL yang sekarang
+        elif rr == 3:
+            tp_pips = sl_pips * 3   # Jika pilih 3 (RR 1:3), perhitungan tetap seperti original
+        else:
+            tp_pips = sl_pips * rr  # Fallback untuk nilai desimal lain
+            
+    # ==========================================
+    # LOGIKA ORIGINAL: UNTUK PAIR LAINNYA
+    # ==========================================
+    else:
+        sl_pips = rule["max_sl"] / rr
+        if sl_pips < rule["min_sl"]:
+            sl_pips = rule["min_sl"]
+        if sl_pips > rule["max_sl"]:
+            sl_pips = rule["max_sl"]
 
-    tp_pips = sl_pips * rr
+        tp_pips = sl_pips * rr
 
+    # Jarak pips ke value harga
     sl_distance = sl_pips * pv
     tp_distance = tp_pips * pv
 
@@ -206,4 +387,5 @@ def index():
             result = calculate_sl_tp(pair, side, entry, rr)
     return render_template_string(HTML, result=result)
 
-app = app
+if __name__ == '__main__':
+    app.run(debug=True)
