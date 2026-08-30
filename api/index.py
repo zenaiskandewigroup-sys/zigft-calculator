@@ -172,6 +172,32 @@ HTML = """
       font-weight: 600;
       color: var(--text-main);
     }
+    /* Style untuk area Value dan tombol Copy */
+    .val-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .copy-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+    }
+    .copy-btn:active {
+      transform: scale(0.95);
+    }
+    
     .status-badge {
       margin-top: 20px;
       padding: 14px;
@@ -242,21 +268,48 @@ HTML = """
           <div class="data-label">Side / RR</div>
           <div class="data-value">{{ result.side.upper() }} <span style="font-size: 0.9rem; color: #888;">(1:{{ result.rr }})</span></div>
         </div>
+        
         <div class="data-item">
           <div class="data-label">Entry</div>
-          <div class="data-value">{{ result.entry }}</div>
+          <div class="val-container">
+            <div class="data-value">{{ result.entry }}</div>
+            <button type="button" class="copy-btn" onclick="copyText('{{ result.entry }}', this)" title="Salin Entry">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+          </div>
         </div>
+        
         <div class="data-item">
           <div class="data-label">Value Pair</div>
           <div class="data-value">{{ result.value_pair }}</div>
         </div>
+        
         <div class="data-item" style="border-color: rgba(244, 67, 54, 0.3);">
           <div class="data-label" style="color: #f44336;">Stop Loss (SL)</div>
-          <div class="data-value">{{ result.sl }} <span style="font-size: 0.8rem; color: #888; font-weight: 400;">(-{{ result.sl_pips }} pips)</span></div>
+          <div class="val-container">
+            <div>
+              <span class="data-value">{{ result.sl }}</span> 
+              <br>
+              <span style="font-size: 0.8rem; color: #888; font-weight: 400;">(-{{ result.sl_pips }} pips)</span>
+            </div>
+            <button type="button" class="copy-btn" onclick="copyText('{{ result.sl }}', this)" title="Salin Stop Loss">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+          </div>
         </div>
+        
         <div class="data-item" style="border-color: rgba(76, 175, 80, 0.3);">
           <div class="data-label" style="color: #4caf50;">Take Profit (TP)</div>
-          <div class="data-value">{{ result.tp }} <span style="font-size: 0.8rem; color: #888; font-weight: 400;">(+{{ result.tp_pips }} pips)</span></div>
+          <div class="val-container">
+            <div>
+              <span class="data-value">{{ result.tp }}</span> 
+              <br>
+              <span style="font-size: 0.8rem; color: #888; font-weight: 400;">(+{{ result.tp_pips }} pips)</span>
+            </div>
+            <button type="button" class="copy-btn" onclick="copyText('{{ result.tp }}', this)" title="Salin Take Profit">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+          </div>
         </div>
       </div>
       
@@ -276,6 +329,26 @@ HTML = """
 
     <footer>© 2025 MaelFX × Idris Lab | TF 2025 System Integrated</footer>
   </div>
+
+  <script>
+    function copyText(text, btnElement) {
+      navigator.clipboard.writeText(text).then(() => {
+        // Simpan icon copy bawaan
+        const originalSVG = btnElement.innerHTML;
+        
+        // Ganti dengan icon centang sukses (warna hijau)
+        btnElement.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        
+        // Kembalikan ke icon semula setelah 1.5 detik
+        setTimeout(() => {
+          btnElement.innerHTML = originalSVG;
+        }, 1500);
+      }).catch(err => {
+        console.error('Gagal menyalin teks: ', err);
+        alert('Gagal menyalin. Silakan copy manual.');
+      });
+    }
+  </script>
 </body>
 </html>
 """
