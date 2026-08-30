@@ -389,24 +389,12 @@ def calculate_sl_tp(pair, side, entry, rr):
     pv = detect_pip_value(pair, entry)
 
     # ==========================================
-    # LOGIKA XAUUSD: SL TETAP DI ~166.66 pips (max_sl / 3),
-    # TP MENGIKUTI KELIPATAN RR (1x, 2x, 3x dari SL)
+    # LOGIKA BARU: SEMUA PAIR MENGGUNAKAN SL STATIS
+    # SL = Max SL / 3 (berlaku untuk Forex & XAUUSD)
+    # TP = SL * RR (RR 1=1x SL, RR 2=2x SL, RR 3=3x SL)
     # ==========================================
-    if pair == "XAUUSD":
-        sl_pips = rule["max_sl"] / 3  # Menghasilkan ~166.66 pips
-        tp_pips = sl_pips * rr        # RR 1 -> 1x SL, RR 2 -> 2x SL, RR 3 -> 3x SL
-            
-    # ==========================================
-    # LOGIKA ORIGINAL: UNTUK PAIR LAINNYA
-    # ==========================================
-    else:
-        sl_pips = rule["max_sl"] / rr
-        if sl_pips < rule["min_sl"]:
-            sl_pips = rule["min_sl"]
-        if sl_pips > rule["max_sl"]:
-            sl_pips = rule["max_sl"]
-
-        tp_pips = sl_pips * rr
+    sl_pips = rule["max_sl"] / 3
+    tp_pips = sl_pips * rr
 
     # Jarak pips ke value harga
     sl_distance = sl_pips * pv
