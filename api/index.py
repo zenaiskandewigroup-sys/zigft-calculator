@@ -1,6 +1,11 @@
+import os
 from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
+
+# URL Backend Render dibaca dari Environment Variable Vercel (atau diatur via tombol Quant API di UI)
+DEFAULT_QUANT_API = os.environ.get("QUANT_API_URL", "").strip().rstrip("/")
+
 
 @app.route('/manifest.json')
 def manifest():
@@ -29,6 +34,7 @@ def manifest():
             }
         ]
     }
+
 
 @app.route('/.well-known/assetlinks.json')
 def assetlinks():
@@ -64,6 +70,7 @@ HTML = """
       --text-muted: #888888;
       --accent: #ffffff;
       --accent-hover: #e0e0e0;
+      --neon-green: #00e676;
     }
     body { 
       background-color: var(--bg-main); 
@@ -84,7 +91,7 @@ HTML = """
       padding: 32px; 
       box-shadow: 0 8px 30px rgba(0,0,0,0.6); 
     }
-    .header { margin-bottom: 28px; }
+    .header { margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
     .header h3 { 
       color: var(--text-main); 
       font-weight: 700; 
@@ -100,6 +107,24 @@ HTML = """
       font-weight: 400; 
       margin: 0; 
     }
+    .api-config-btn {
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 8px;
+      padding: 8px 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .api-config-btn:hover { border-color: var(--border-focus); color: var(--text-main); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #555; }
+    .status-dot.active { background: var(--neon-green); box-shadow: 0 0 6px var(--neon-green); }
+
     .form-label { 
       color: var(--text-muted) !important; 
       font-weight: 500; 
@@ -120,8 +145,6 @@ HTML = """
       box-shadow: 0 0 0 3px rgba(255,255,255,0.05) !important; 
     }
     .form-control::placeholder { color: #444 !important; }
-    
-    /* Cursor pointer khusus input pair agar terlihat bisa diklik */
     #pairInput { cursor: pointer; }
 
     .btn-submit { 
@@ -153,6 +176,9 @@ HTML = """
       margin-bottom: 20px;
       padding-bottom: 15px;
       border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .result-grid {
       display: grid;
@@ -194,13 +220,8 @@ HTML = """
       align-items: center;
       justify-content: center;
     }
-    .copy-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: var(--text-main);
-    }
-    .copy-btn:active {
-      transform: scale(0.95);
-    }
+    .copy-btn:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-main); }
+    .copy-btn:active { transform: scale(0.95); }
     
     .status-badge {
       margin-top: 20px;
@@ -223,10 +244,151 @@ HTML = """
       color: #f44336;
       border: 1px solid rgba(220, 53, 69, 0.2);
     }
+
+    /* ========================================= */
+    /* QUANT MARKET INTELLIGENCE PANEL           */
+    /* ========================================= */
+    .quant-section {
+      margin-top: 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .quant-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .quant-tag {
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(0, 230, 118, 0.12);
+      color: var(--neon-green);
+      border: 1px solid rgba(0, 230, 118, 0.25);
+      font-weight: 600;
+    }
+    .q-card {
+      background: var(--bg-main);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .q-card:last-child { margin-bottom: 0; }
+    .q-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .q-pill {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .pill-green { background: rgba(76, 175, 80, 0.15); color: #4caf50; border: 1px solid rgba(76, 175, 80, 0.3); }
+    .pill-yellow { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
+    .pill-red { background: rgba(244, 67, 54, 0.15); color: #f44336; border: 1px solid rgba(244, 67, 54, 0.3); }
+    .pill-neutral { background: rgba(255, 255, 255, 0.08); color: #ccc; border: 1px solid #333; }
+
+    .liq-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .liq-box {
+      background: #0a0a0a;
+      border: 1px solid #1e1e1e;
+      border-radius: 6px;
+      padding: 8px;
+      text-align: center;
+    }
+    .liq-lbl { font-size: 0.68rem; color: var(--text-muted); }
+    .liq-val { font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-top: 2px; }
+
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      background: #1a1a1a;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--neon-green);
+      transition: width 0.4s ease;
+    }
+    .csm-bar-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.85rem;
+      margin-top: 6px;
+    }
+    .csm-rank-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px dashed #222;
+    }
+    .csm-chip {
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #111;
+      border: 1px solid #262626;
+      color: #bbb;
+    }
+    .alert-box-warn {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: rgba(244, 67, 54, 0.12);
+      border: 1px solid rgba(244, 67, 54, 0.3);
+      color: #ff6b6b;
+      font-size: 0.8rem;
+    }
+    .spinner-box {
+      text-align: center;
+      padding: 20px 10px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .spinner-ring {
+      width: 22px;
+      height: 22px;
+      border: 2px solid #333;
+      border-top-color: var(--neon-green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 10px auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     footer { margin-top: 32px; text-align: center; font-size: 0.8rem; color: #555; }
 
     /* ========================================= */
-    /* MODAL SYMBOL SELECTION (NEW UI)           */
+    /* MODAL SYMBOL SELECTION & API SETTINGS     */
     /* ========================================= */
     .modal-overlay {
       display: none; 
@@ -243,7 +405,7 @@ HTML = """
       width: 100%; max-width: 520px;
       height: 100%; max-height: 100vh;
       display: flex; flex-direction: column;
-      animation: slideUp 0.3s ease-out;
+      animation: slideUp 0.25s ease-out;
     }
     @media (min-width: 521px) {
       .modal-container {
@@ -283,9 +445,7 @@ HTML = """
       font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
       background: var(--bg-card); border-bottom: 1px solid var(--border);
     }
-    .modal-list {
-      flex: 1; overflow-y: auto; padding-bottom: 20px;
-    }
+    .modal-list { flex: 1; overflow-y: auto; padding-bottom: 20px; }
     .symbol-item {
       display: flex; justify-content: space-between; align-items: center;
       padding: 16px 24px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s;
@@ -293,8 +453,6 @@ HTML = """
     .symbol-item:hover { background: var(--bg-card); }
     .symbol-item .pair-name { font-weight: 500; font-size: 1rem; color: var(--text-main); }
     .symbol-item .pair-vp { color: var(--text-muted); font-size: 0.95rem; }
-    
-    /* Scrollbar minimalis untuk daftar */
     .modal-list::-webkit-scrollbar { width: 6px; }
     .modal-list::-webkit-scrollbar-track { background: transparent; }
     .modal-list::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
@@ -304,32 +462,38 @@ HTML = """
   <div class="container">
     <div class="dashboard-card">
       <div class="header">
-        <h3>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          Auto Price v9.0
-        </h3>
-        <p>RR Smart Mode | TF Official System 2025 | Auto Value Pair</p>
+        <div>
+          <h3>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            Auto Price v9.0
+          </h3>
+          <p>RR Smart Mode | TF Official System 2025 | Auto Value Pair</p>
+        </div>
+        <button type="button" class="api-config-btn" onclick="openApiModal()" title="Konfigurasi Render Quant Engine">
+          <span id="quantStatusDot" class="status-dot"></span>
+          <span>Quant API</span>
+        </button>
       </div>
-      <form method="POST">
+
+      <form method="POST" onsubmit="return validatePairForm()">
         <div class="mb-3">
           <label class="form-label">Pair</label>
-          <!-- Atribut readonly & onclick memicu popup modal -->
-          <input type="text" id="pairInput" name="pair" class="form-control" placeholder="Pilih Symbol" readonly onclick="openModal()" required>
+          <input type="text" id="pairInput" name="pair" class="form-control" placeholder="Pilih Symbol" value="{{ result.pair if result else '' }}" readonly onclick="openModal()" required>
         </div>
         <div class="mb-3">
           <label class="form-label">Side</label>
           <select name="side" class="form-select" required>
-            <option value="buy">Buy</option>
-            <option value="sell">Sell</option>
+            <option value="buy" {% if result and result.side == 'buy' %}selected{% endif %}>Buy</option>
+            <option value="sell" {% if result and result.side == 'sell' %}selected{% endif %}>Sell</option>
           </select>
         </div>
         <div class="mb-3">
           <label class="form-label">Entry Price</label>
-          <input type="number" step="any" name="entry" class="form-control" placeholder="contoh: 4060.52 atau 0.65352" required>
+          <input type="number" step="any" name="entry" class="form-control" placeholder="contoh: 4060.52 atau 0.65352" value="{{ result.entry if result else '' }}" required>
         </div>
         <div class="mb-3">
           <label class="form-label">RR (1 - 3)</label>
-          <input type="number" step="0.1" name="rr" class="form-control" placeholder="contoh: 2.5" required>
+          <input type="number" step="0.1" name="rr" class="form-control" placeholder="contoh: 2.5" value="{{ result.rr if result else '' }}" required>
         </div>
         <button type="submit" class="btn btn-submit w-100">Hitung SL/TP</button>
       </form>
@@ -337,7 +501,10 @@ HTML = """
 
     {% if result %}
     <div class="result-wrapper">
-      <div class="result-header">Hasil Perhitungan</div>
+      <div class="result-header">
+        <span>Hasil Perhitungan</span>
+        <span style="font-size: 0.78rem; color: var(--neon-green); font-weight: 500;">{{ result.pair }} • 1:{{ result.rr }}</span>
+      </div>
       <div class="result-grid">
         <div class="data-item">
           <div class="data-label">Pair</div>
@@ -404,6 +571,25 @@ HTML = """
         </div>
       {% endif %}
     </div>
+
+    <!-- PANEL QUANT MARKET INTELLIGENCE (RENDER LIVE + CORRELATION GUARD) -->
+    <div class="quant-section" id="quantPanel">
+      <div class="quant-title">
+        <span>Quant Market Intelligence</span>
+        <span class="quant-tag" id="quantSourceTag">LIVE FEED</span>
+      </div>
+
+      <!-- Correlation Guard (Client-side Session Exposure) -->
+      <div id="correlationBox"></div>
+
+      <!-- Konten Dinamis dari Render API -->
+      <div id="quantDynamicBody">
+        <div class="spinner-box">
+          <div class="spinner-ring"></div>
+          <div>Mengambil data likuiditas, ATR-14, CSM &amp; probabilitas dari Render...</div>
+        </div>
+      </div>
+    </div>
     {% endif %}
 
     <footer>© 2025 MaelFX × Idris Lab | TF 2025 System Integrated</footer>
@@ -417,7 +603,7 @@ HTML = """
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
         </button>
         <h4>Pilih Symbol</h4>
-        <div style="width: 24px;"></div> <!-- Spacer untuk center alignment -->
+        <div style="width: 24px;"></div>
       </div>
       
       <div class="modal-search-wrapper">
@@ -431,7 +617,6 @@ HTML = """
       </div>
       
       <div class="modal-list" id="symbolList">
-        <!-- Render data Pair dari Python ke HTML -->
         {% for pair_name, rule_data in tf_rules.items() %}
         <div class="symbol-item" onclick="selectPair('{{ pair_name }}')">
           <span class="pair-name">{{ pair_name }}</span>
@@ -442,7 +627,72 @@ HTML = """
     </div>
   </div>
 
+  <!-- MODAL KONFIGURASI RENDER QUANT API URL -->
+  <div id="apiModal" class="modal-overlay">
+    <div class="modal-container" style="height: auto; max-height: 90vh; padding: 24px;">
+      <div class="modal-header" style="padding: 0 0 16px 0;">
+        <button class="close-modal-btn" onclick="closeApiModal()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <h4>Koneksi Render Quant Engine</h4>
+        <div style="width: 22px;"></div>
+      </div>
+      <div style="margin-top: 16px;">
+        <label class="form-label">URL Backend Render Anda</label>
+        <input type="url" id="renderUrlInput" class="form-control" placeholder="https://zigft-quant-engine.onrender.com">
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 8px;">
+          Masukkan URL Web Service Render Anda (atau atur Environment Variable <code>QUANT_API_URL</code> di Vercel). Tersimpan otomatis di browser HP ini.
+        </p>
+        <button type="button" class="btn btn-submit w-100" onclick="saveRenderUrl()">Simpan &amp; Hubungkan</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    const ENV_QUANT_API = "{{ default_quant_api }}";
+
+    function validatePairForm() {
+      const pairVal = document.getElementById("pairInput").value.trim();
+      if (!pairVal) {
+        openModal();
+        return false;
+      }
+      return true;
+    }
+
+    function getQuantApiUrl() {
+      const saved = localStorage.getItem("zigft_quant_api_url");
+      if (saved && saved.trim() !== "") return saved.trim().replace(/\/+$/, "");
+      return ENV_QUANT_API;
+    }
+
+    function updateStatusDot() {
+      const dot = document.getElementById("quantStatusDot");
+      if (!dot) return;
+      if (getQuantApiUrl()) {
+        dot.classList.add("active");
+      } else {
+        dot.classList.remove("active");
+      }
+    }
+
+    function openApiModal() {
+      document.getElementById("renderUrlInput").value = getQuantApiUrl();
+      document.getElementById("apiModal").style.display = "flex";
+    }
+
+    function closeApiModal() {
+      document.getElementById("apiModal").style.display = "none";
+    }
+
+    function saveRenderUrl() {
+      const val = document.getElementById("renderUrlInput").value.trim().replace(/\/+$/, "");
+      localStorage.setItem("zigft_quant_api_url", val);
+      updateStatusDot();
+      closeApiModal();
+      if (typeof runQuantFetch === "function") runQuantFetch();
+    }
+
     // Copy Function
     function copyText(text, btnElement) {
       navigator.clipboard.writeText(text).then(() => {
@@ -458,7 +708,6 @@ HTML = """
     // Modal Control Functions
     function openModal() {
       document.getElementById('symbolModal').style.display = 'flex';
-      // Mencegah body scroll di latar belakang (khusus mobile)
       document.body.style.overflow = 'hidden'; 
     }
 
@@ -472,7 +721,6 @@ HTML = """
       closeModal();
     }
 
-    // Search Filter
     function filterSymbols() {
       let input = document.getElementById('searchInput');
       let filter = input.value.toUpperCase();
@@ -488,6 +736,212 @@ HTML = """
         }
       }
     }
+
+    updateStatusDot();
+
+    {% if result %}
+    // =========================================
+    // CORRELATION EXPOSURE GUARD (LOCAL SESSION)
+    // =========================================
+    function checkCorrelationGuard(pair, side) {
+      const todayKey = "zigft_setups_" + new Date().toISOString().slice(0, 10);
+      let setups = [];
+      try {
+        setups = JSON.parse(localStorage.getItem(todayKey) || "[]");
+      } catch (e) { setups = []; }
+
+      const base = pair.slice(0, 3);
+      const quote = pair.slice(3);
+      const currExp = {};
+      currExp[base] = side === "buy" ? 1 : -1;
+      currExp[quote] = side === "buy" ? -1 : 1;
+
+      const conflicts = [];
+      setups.forEach(s => {
+        if (s.pair === pair && s.side === side) return;
+        const sBase = s.pair.slice(0, 3);
+        const sQuote = s.pair.slice(3);
+        const sExp = {};
+        sExp[sBase] = s.side === "buy" ? 1 : -1;
+        sExp[sQuote] = s.side === "buy" ? -1 : 1;
+
+        for (const ccy of Object.keys(currExp)) {
+          if (sExp[ccy] && sExp[ccy] === currExp[ccy]) {
+            const dirLabel = currExp[ccy] > 0 ? "Long" : "Short";
+            conflicts.push(`${ccy} (${dirLabel}) searah dengan ${s.pair} ${s.side.toUpperCase()}`);
+          }
+        }
+      });
+
+      const filtered = setups.filter(s => !(s.pair === pair && s.side === side));
+      filtered.push({ pair: pair, side: side, ts: Date.now() });
+      localStorage.setItem(todayKey, JSON.stringify(filtered.slice(-10)));
+
+      const box = document.getElementById("correlationBox");
+      if (conflicts.length > 0 && box) {
+        const uniqueConflicts = [...new Set(conflicts)];
+        box.innerHTML = `
+          <div class="q-card" style="border-color: rgba(255, 193, 7, 0.35); margin-bottom: 12px;">
+            <div class="q-card-head">
+              <span style="color: #ffc107;">Correlation Exposure Guard</span>
+              <span class="q-pill pill-yellow">STACKED RISK</span>
+            </div>
+            <div style="font-size: 0.82rem; color: #ddd;">
+              Eksposur mata uang ganda hari ini: <strong>${uniqueConflicts.join(" • ")}</strong>. Pastikan tidak melebihi batas risiko harian.
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // =========================================
+    // FETCH LIVE QUANT INTELLIGENCE DARI RENDER
+    // =========================================
+    async function runQuantFetch() {
+      const container = document.getElementById("quantDynamicBody");
+      const apiBase = getQuantApiUrl();
+
+      if (!apiBase) {
+        container.innerHTML = `
+          <div class="q-card">
+            <div style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 10px;">
+              URL Backend Render belum diatur. Klik tombol <strong>Quant API</strong> di pojok kanan atas untuk menempelkan link Render Anda.
+            </div>
+            <button type="button" class="btn btn-submit w-100" style="padding: 10px; font-size: 0.85rem;" onclick="openApiModal()">Hubungkan URL Render</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="spinner-box">
+          <div class="spinner-ring"></div>
+          <div>Menganalisis Likuiditas, ATR-14, CSM &amp; Probabilitas Historis...</div>
+        </div>
+      `;
+
+      try {
+        const resp = await fetch(`${apiBase}/api/quant-analysis`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pair: "{{ result.pair }}",
+            side: "{{ result.side }}",
+            entry: {{ result.entry }},
+            sl: {{ result.sl }},
+            tp: {{ result.tp }},
+            sl_pips: {{ result.sl_pips }},
+            tp_pips: {{ result.tp_pips }},
+            rr: {{ result.rr }}
+          })
+        });
+
+        const data = await resp.json();
+        if (!resp.ok || data.error) {
+          throw new Error(data.error || "Gagal memuat analisis");
+        }
+
+        document.getElementById("quantSourceTag").innerText = `${data.feed_source}${data.spot_calibrated ? " • SPOT CAL" : ""}`;
+
+        let kzPill = "pill-neutral";
+        if (data.killzone.is_weekend) kzPill = "pill-red";
+        else if (data.killzone.quality === "KILLZONE") kzPill = "pill-green";
+        else if (data.killzone.quality === "SPREAD_RISK") kzPill = "pill-red";
+        else if (data.killzone.quality === "TRANSITION") kzPill = "pill-yellow";
+
+        let sweepHtml = `<div style="font-size: 0.8rem; color: #4caf50; margin-top: 8px;">✓ Posisi SL aman dari radius sweep likuiditas terdekat.</div>`;
+        if (data.liquidity.sweep_alerts && data.liquidity.sweep_alerts.length > 0) {
+          sweepHtml = data.liquidity.sweep_alerts.map(a => `<div class="alert-box-warn">⚠️ Sweep Risk: ${a}</div>`).join("");
+        }
+
+        let atrPill = data.volatility.status === "OPTIMAL" ? "pill-green" : (data.volatility.status === "STRETCHED" ? "pill-yellow" : "pill-red");
+        let barWidth = Math.min(data.volatility.exhaustion_pct, 100);
+        let barColor = data.volatility.exhaustion_pct >= 85 ? "#f44336" : (data.volatility.exhaustion_pct >= 65 ? "#ffc107" : "#00e676");
+
+        let csmPill = data.strength.verdict === "ALIGNED" ? "pill-green" : (data.strength.verdict === "COUNTER" ? "pill-red" : "pill-neutral");
+        let chipsHtml = data.strength.ranking.map(r => `<span class="csm-chip">${r.ccy} <strong>${r.score}</strong></span>`).join("");
+
+        container.innerHTML = `
+          <!-- 1. Liquidity Pool & Killzone Radar -->
+          <div class="q-card">
+            <div class="q-card-head">
+              <span>1. Liquidity Pool &amp; Killzone</span>
+              <span class="q-pill ${kzPill}">${data.killzone.is_weekend ? "MARKET CLOSED" : data.killzone.zone_name}</span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">
+              Waktu Server Lokal: <strong style="color: var(--text-main);">${data.killzone.day_name}, ${data.killzone.wib_time}</strong>
+            </div>
+            <div class="liq-grid">
+              <div class="liq-box"><div class="liq-lbl">PDH</div><div class="liq-val">${data.liquidity.pdh}</div></div>
+              <div class="liq-box"><div class="liq-lbl">PWH</div><div class="liq-val">${data.liquidity.pwh}</div></div>
+              <div class="liq-box"><div class="liq-lbl">Asian High</div><div class="liq-val">${data.liquidity.asian_high}</div></div>
+              <div class="liq-box"><div class="liq-lbl">PDL</div><div class="liq-val">${data.liquidity.pdl}</div></div>
+              <div class="liq-box"><div class="liq-lbl">PWL</div><div class="liq-val">${data.liquidity.pwl}</div></div>
+              <div class="liq-box"><div class="liq-lbl">Asian Low</div><div class="liq-val">${data.liquidity.asian_low}</div></div>
+            </div>
+            ${sweepHtml}
+          </div>
+
+          <!-- 2. Dynamic ATR(14) & Range Exhaustion -->
+          <div class="q-card">
+            <div class="q-card-head">
+              <span>2. ATR(14) &amp; Daily Range Filter</span>
+              <span class="q-pill ${atrPill}">${data.volatility.status}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.83rem;">
+              <span>Terpakai Hari Ini: <strong>${data.volatility.today_range_pips} pips</strong></span>
+              <span>ATR-14: <strong>${data.volatility.atr_14_pips} pips</strong> (${data.volatility.exhaustion_pct}%)</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width: ${barWidth}%; background: ${barColor};"></div>
+            </div>
+            <div style="font-size: 0.79rem; color: var(--text-muted);">${data.volatility.note}</div>
+          </div>
+
+          <!-- 3. Currency Strength Meter (0 - 10) -->
+          <div class="q-card">
+            <div class="q-card-head">
+              <span>3. Live Currency Strength (0–10)</span>
+              <span class="q-pill ${csmPill}">${data.strength.verdict}</span>
+            </div>
+            <div class="csm-bar-row">
+              <span><strong>${data.strength.base_ccy}</strong>: ${data.strength.base_score}/10</span>
+              <span style="color:var(--text-muted); font-size:0.75rem;">VS</span>
+              <span><strong>${data.strength.quote_ccy}</strong>: ${data.strength.quote_score}/10</span>
+            </div>
+            <div style="font-size: 0.8rem; color: #ccc; margin-top: 6px;">${data.strength.note}</div>
+            <div class="csm-rank-strip">${chipsHtml}</div>
+          </div>
+
+          <!-- 4. Quantitative Seasonality & Probability -->
+          <div class="q-card">
+            <div class="q-card-head">
+              <span>4. Quantitative Historical Edge</span>
+              <span class="q-pill pill-neutral">2Y DATA</span>
+            </div>
+            <div style="font-size: 0.83rem; color: var(--text-main); margin-bottom: 4px;">
+              Hari <strong>${data.seasonality.day_name}</strong> (${data.side}): <strong style="color: var(--neon-green);">${data.seasonality.day_winrate}%</strong> historis searah <span style="color:var(--text-muted); font-size:0.75rem;">(N=${data.seasonality.day_samples}, median ${data.seasonality.day_median_pips} pips)</span>
+            </div>
+            <div style="font-size: 0.83rem; color: var(--text-main);">
+              Sesi <strong>${data.seasonality.session_name}</strong> (${data.side}): <strong style="color: var(--neon-green);">${data.seasonality.session_winrate}%</strong> historis searah <span style="color:var(--text-muted); font-size:0.75rem;">(N=${data.seasonality.session_samples}, median ${data.seasonality.session_median_pips} pips)</span>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        container.innerHTML = `
+          <div class="q-card">
+            <div style="font-size: 0.82rem; color: #ff6b6b; margin-bottom: 10px;">
+              Server Render sedang bangun dari mode sleep (cold start) atau tidak terjangkau: ${err.message}
+            </div>
+            <button type="button" class="btn btn-submit w-100" style="padding: 10px; font-size: 0.85rem;" onclick="runQuantFetch()">Muat Ulang Analisis</button>
+          </div>
+        `;
+      }
+    }
+
+    checkCorrelationGuard("{{ result.pair }}", "{{ result.side }}");
+    runQuantFetch();
+    {% endif %}
   </script>
 </body>
 </html>
@@ -513,6 +967,7 @@ TF_RULES = {
     "XAUUSD": {"vp": 0.5, "min_sl": 30, "max_sl": 500},
 }
 
+
 def detect_pip_value(pair: str, entry: float):
     pair = pair.upper()
     if "XAU" in pair:
@@ -523,20 +978,15 @@ def detect_pip_value(pair: str, entry: float):
         decimals = len(str(entry).split('.')[-1]) if '.' in str(entry) else 0
         return 0.0001 if decimals >= 4 else 0.01
 
+
 def calculate_sl_tp(pair, side, entry, rr):
     pair = pair.upper()
     rule = TF_RULES.get(pair, {"vp": 1, "min_sl": 20, "max_sl": 200})
     pv = detect_pip_value(pair, entry)
 
-    # ==========================================
-    # LOGIKA BARU: SEMUA PAIR MENGGUNAKAN SL STATIS
-    # SL = Max SL / 3 (berlaku untuk Forex & XAUUSD)
-    # TP = SL * RR (RR 1=1x SL, RR 2=2x SL, RR 3=3x SL)
-    # ==========================================
     sl_pips = rule["max_sl"] / 3
     tp_pips = sl_pips * rr
 
-    # Jarak pips ke value harga
     sl_distance = sl_pips * pv
     tp_distance = tp_pips * pv
 
@@ -564,6 +1014,7 @@ def calculate_sl_tp(pair, side, entry, rr):
         "validation_text": validation_text
     }
 
+
 @app.route("/", methods=["GET", "POST"])
 def index():
     result = None
@@ -574,8 +1025,13 @@ def index():
         rr = float(request.form["rr"])
         if 1 <= rr <= 3:
             result = calculate_sl_tp(pair, side, entry, rr)
-            
-    # Variabel tf_rules dilempar ke template HTML agar Jinja2 bisa merender list otomatis
-    return render_template_string(HTML, result=result, tf_rules=TF_RULES)
+
+    return render_template_string(
+        HTML,
+        result=result,
+        tf_rules=TF_RULES,
+        default_quant_api=DEFAULT_QUANT_API
+    )
+
 
 app = app
