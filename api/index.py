@@ -80,7 +80,7 @@ BASE_CSS = """
     justify-content: space-between;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -120,6 +120,38 @@ BASE_CSS = """
   .api-config-btn:hover { border-color: var(--border-focus); color: var(--text-main); }
   .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #555; }
   .status-dot.active { background: var(--neon-green); box-shadow: 0 0 6px var(--neon-green); }
+
+  /* LIVE NEWS COUNTDOWN BANNER (TOP) */
+  .news-banner {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+  .news-banner-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .news-timer-box {
+    font-family: monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
+    background: rgba(0, 230, 118, 0.12);
+    color: var(--neon-green);
+    border: 1px solid rgba(0, 230, 118, 0.3);
+    letter-spacing: 0.5px;
+  }
+  .news-timer-box.urgent {
+    background: rgba(244, 67, 54, 0.16);
+    color: #ff6b6b;
+    border-color: rgba(244, 67, 54, 0.45);
+  }
 
   .dashboard-card {
     background: var(--bg-card);
@@ -183,16 +215,33 @@ BASE_CSS = """
     cursor: not-allowed;
   }
   .btn-outline-custom {
-    background: var(--bg-main);
-    border: 1px solid var(--border);
+    background: #111111;
+    border: 1px solid #2c2c2c;
     color: var(--text-main);
     font-size: 0.85rem;
     font-weight: 600;
     padding: 11px 14px;
     border-radius: 8px;
-    transition: all 0.2s ease;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: rgba(0, 230, 118, 0.2);
+    transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
   }
-  .btn-outline-custom:disabled { color: #444; border-color: #181818; cursor: not-allowed; }
+  .btn-outline-custom:hover {
+    background: #191919;
+    border-color: var(--neon-green);
+  }
+  .btn-outline-custom:active {
+    transform: scale(0.95);
+    background: rgba(0, 230, 118, 0.15);
+  }
+  .btn-outline-custom:disabled {
+    color: #666;
+    border-color: #1c1c1c;
+    background: #090909;
+    cursor: wait;
+    transform: none;
+  }
 
   .result-wrapper, .quant-section {
     margin-top: 20px;
@@ -342,14 +391,8 @@ BASE_CSS = """
   }
   .cal-cell:hover { transform: scale(1.03); }
   .cal-cell.empty { background: transparent; border-color: transparent; cursor: default; }
-  .cal-cell.profit {
-    background: rgba(0, 230, 118, 0.14);
-    border-color: rgba(0, 230, 118, 0.45);
-  }
-  .cal-cell.loss {
-    background: rgba(244, 67, 54, 0.15);
-    border-color: rgba(244, 67, 54, 0.45);
-  }
+  .cal-cell.profit { background: rgba(0, 230, 118, 0.14); border-color: rgba(0, 230, 118, 0.45); }
+  .cal-cell.loss { background: rgba(244, 67, 54, 0.15); border-color: rgba(244, 67, 54, 0.45); }
   .cal-day-num { font-size: 0.7rem; color: var(--text-muted); align-self: flex-start; padding-left: 2px; }
   .cal-pnl-txt { font-size: 0.72rem; font-weight: 700; text-align: center; line-height: 1.1; }
   .cal-cell.profit .cal-pnl-txt { color: var(--neon-green); }
@@ -373,7 +416,7 @@ COMMON_API_MODAL = """
         <label class="form-label">URL Backend Render Anda</label>
         <input type="url" id="renderUrlInput" class="form-control" placeholder="https://zigft-calculator-backend.onrender.com">
         <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 8px;">
-          URL tersimpan otomatis di browser perangkat ini dan menghubungkan Kalkulator Quant, Prediksi News, serta Kalender PnL.
+          URL tersimpan otomatis di browser perangkat ini dan menghubungkan Hitung Mundur News, Kalkulator Quant, serta Kalender PnL.
         </p>
         <button type="button" class="btn btn-submit w-100" onclick="saveRenderUrl()">Simpan &amp; Hubungkan</button>
       </div>
@@ -435,6 +478,19 @@ HTML_CALCULATOR = """
         <span id="quantStatusDot" class="status-dot"></span>
         <span>Quant API</span>
       </button>
+    </div>
+
+    <!-- TOP LIVE MACRO NEWS COUNTDOWN & PRE-NEWS BIAS BANNER -->
+    <div class="news-banner" id="topNewsBanner">
+      <div class="news-banner-head">
+        <span style="font-size:0.74rem; color:var(--text-muted); text-transform:uppercase; font-weight:600;">
+          High-Impact News Countdown
+        </span>
+        <span class="news-timer-box" id="newsCountdownClock">--:--:--</span>
+      </div>
+      <div id="topNewsContent" style="font-size:0.82rem; color:var(--text-muted);">
+        Memuat jadwal berita high-impact &amp; proyeksi arah...
+      </div>
     </div>
 
     <div class="dashboard-card">
@@ -535,7 +591,6 @@ HTML_CALCULATOR = """
         </div>
       {% endif %}
 
-      <!-- ZIGFT ANALYST SYSTEM RULE ENFORCER & PORTFOLIO LOGGER -->
       <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <span style="font-size:0.78rem; font-weight:600; color:var(--text-muted); text-transform:uppercase;">ZIGFT Structure &amp; Discipline Gate</span>
@@ -567,7 +622,6 @@ HTML_CALCULATOR = """
       </div>
     </div>
 
-    <!-- PANEL QUANT MARKET INTELLIGENCE -->
     <div class="quant-section" id="quantPanel">
       <div class="quant-title">
         <span>Quant Market Intelligence</span>
@@ -618,6 +672,84 @@ HTML_CALCULATOR = """
   {{ common_api_modal | safe }}
 
   <script>
+    let targetNewsReleaseMs = null;
+    let countdownTimerId = null;
+
+    function startNewsCountdown(releaseTsMs) {
+      targetNewsReleaseMs = releaseTsMs;
+      if (countdownTimerId) clearInterval(countdownTimerId);
+
+      function tick() {
+        const clockEl = document.getElementById("newsCountdownClock");
+        if (!clockEl || !targetNewsReleaseMs) return;
+
+        const diffMs = targetNewsReleaseMs - Date.now();
+        if (diffMs <= 0) {
+          clockEl.innerText = "RILIS SEKARANG";
+          clockEl.classList.add("urgent");
+          return;
+        }
+
+        const totalSec = Math.floor(diffMs / 1000);
+        const hrs = String(Math.floor(totalSec / 3600)).padStart(2, "0");
+        const mins = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
+        const secs = String(totalSec % 60).padStart(2, "0");
+
+        clockEl.innerText = `${hrs}:${mins}:${secs}`;
+        if (totalSec <= 1800) clockEl.classList.add("urgent");
+        else clockEl.classList.remove("urgent");
+      }
+
+      tick();
+      countdownTimerId = setInterval(tick, 1000);
+    }
+
+    async function loadTopNewsBanner(pairFilter = "") {
+      const contentEl = document.getElementById("topNewsContent");
+      const clockEl = document.getElementById("newsCountdownClock");
+      const apiBase = getQuantApiUrl();
+
+      if (!apiBase) {
+        clockEl.innerText = "NO API";
+        contentEl.innerHTML = `Hubungkan URL Render lewat tombol <strong>Quant API</strong> di pojok kanan atas untuk mengaktifkan hitung mundur news.`;
+        return;
+      }
+
+      try {
+        const q = pairFilter ? `?pair=${encodeURIComponent(pairFilter)}` : "";
+        const resp = await fetch(`${apiBase}/api/news-radar${q}`);
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || "Gagal memuat jadwal news");
+
+        const nw = data.news;
+        if (!nw.has_event) {
+          clockEl.innerText = "AMAN";
+          clockEl.classList.remove("urgent");
+          contentEl.innerHTML = `<span style="color:#4caf50;">✓</span> ${nw.note}`;
+          return;
+        }
+
+        if (nw.release_ts_ms) {
+          startNewsCountdown(nw.release_ts_ms);
+        }
+
+        const predColor = nw.prediction.includes("BULLISH") ? "#00e676" : (nw.prediction.includes("BEARISH") ? "#ff6b6b" : "#ffc107");
+        contentEl.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:3px;">
+            <strong style="color:var(--text-main); font-size:0.86rem;">[${nw.currency}] ${nw.title}</strong>
+            <span style="font-size:0.72rem; font-weight:700; color:${predColor};">${nw.prediction}</span>
+          </div>
+          <div style="font-size:0.76rem; color:var(--text-muted);">
+            Jadwal: <strong style="color:#ddd;">${nw.release_wib}</strong> • Forecast: <strong>${nw.forecast}</strong> | Prev: <strong>${nw.previous}</strong>
+          </div>
+          <div style="font-size:0.77rem; color:#ccc; margin-top:3px;">${nw.reasoning}</div>
+        `;
+      } catch (err) {
+        clockEl.innerText = "SLEEP";
+        contentEl.innerHTML = `Server Render sedang bangun: ${err.message}`;
+      }
+    }
+
     function validatePairForm() {
       if (!document.getElementById("pairInput").value.trim()) {
         openModal();
@@ -643,6 +775,7 @@ HTML_CALCULATOR = """
     function selectPair(pairName) {
       document.getElementById('pairInput').value = pairName;
       closeModal();
+      loadTopNewsBanner(pairName);
     }
     function filterSymbols() {
       const filter = document.getElementById('searchInput').value.toUpperCase();
@@ -652,6 +785,9 @@ HTML_CALCULATOR = """
         items[i].style.display = name.toUpperCase().indexOf(filter) > -1 ? "flex" : "none";
       }
     }
+
+    // Muat hitung mundur news segera saat halaman dibuka
+    loadTopNewsBanner("{{ result.pair if result else '' }}");
 
     {% if result %}
     let latestQuantData = null;
@@ -804,7 +940,6 @@ HTML_CALCULATOR = """
 
         document.getElementById("quantSourceTag").innerText = `${data.feed_source}${data.spot_calibrated ? " • SPOT CAL" : ""}`;
 
-        // Update ZIGFT Rules Badge & Simulasi 1 Lot
         const zr = data.zigft_rules;
         const badge = document.getElementById("ruleQuotaBadge");
         badge.innerText = `Entry: ${zr.daily_used}/${zr.daily_max} Hari Ini • SL: ${zr.monthly_sl_used}/${zr.monthly_sl_max} Bulan Ini`;
@@ -821,8 +956,11 @@ HTML_CALCULATOR = """
         `;
         updateActionGate();
 
-        // 1. Pre-News Predictive Bot HTML
         const np = data.news_prediction;
+        if (np.has_event && np.release_ts_ms) {
+          startNewsCountdown(np.release_ts_ms);
+        }
+
         let newsHtml = "";
         if (np.has_event) {
           let predPill = np.prediction.includes("BULLISH") ? "pill-green" : (np.prediction.includes("BEARISH") ? "pill-red" : "pill-yellow");
@@ -853,31 +991,26 @@ HTML_CALCULATOR = """
           `;
         }
 
-        // 2. SMC Fib 50-75% OTE & Inducement
         const smc = data.smc;
         let smcPill = (smc.verdict === "OPTIMAL" || smc.verdict === "VALID") ? "pill-green" : (smc.verdict === "STRETCHED" ? "pill-yellow" : "pill-red");
         let idmColor = smc.idm_swept ? "#4caf50" : "#ffc107";
 
-        // 3. Killzone & Sweep
         let kzPill = data.killzone.is_weekend ? "pill-red" : (data.killzone.quality === "KILLZONE" ? "pill-green" : (data.killzone.quality === "SPREAD_RISK" ? "pill-red" : "pill-neutral"));
         let sweepHtml = `<div style="font-size: 0.79rem; color: #4caf50; margin-top: 8px;">✓ Posisi SL aman dari radius sweep likuiditas terdekat.</div>`;
         if (data.liquidity.sweep_alerts && data.liquidity.sweep_alerts.length > 0) {
           sweepHtml = data.liquidity.sweep_alerts.map(a => `<div class="alert-box-warn">⚠️ Sweep Risk: ${a}</div>`).join("");
         }
 
-        // 4. ATR
         let atrPill = data.volatility.status === "OPTIMAL" ? "pill-green" : (data.volatility.status === "STRETCHED" ? "pill-yellow" : "pill-red");
         let barWidth = Math.min(data.volatility.exhaustion_pct, 100);
         let barColor = data.volatility.exhaustion_pct >= 85 ? "#f44336" : (data.volatility.exhaustion_pct >= 65 ? "#ffc107" : "#00e676");
 
-        // 5. CSM
         let csmPill = data.strength.verdict === "ALIGNED" ? "pill-green" : (data.strength.verdict === "COUNTER" ? "pill-red" : "pill-neutral");
         let chipsHtml = data.strength.ranking.map(r => `<span class="csm-chip">${r.ccy} <strong>${r.score}</strong></span>`).join("");
 
         container.innerHTML = `
           ${newsHtml}
 
-          <!-- 2. SMC Fib 50%-75% OTE & Inducement -->
           <div class="q-card">
             <div class="q-card-head">
               <span>2. SMC Dealing Range (Fib 50%–75%)</span>
@@ -892,7 +1025,6 @@ HTML_CALCULATOR = """
             <div style="font-size: 0.79rem; color: ${idmColor}; margin-top: 4px;">${smc.idm_swept ? "✓" : "•"} ${smc.idm_note}</div>
           </div>
 
-          <!-- 3. Liquidity Pool & Killzone -->
           <div class="q-card">
             <div class="q-card-head">
               <span>3. Liquidity Pool &amp; Killzone</span>
@@ -912,7 +1044,6 @@ HTML_CALCULATOR = """
             ${sweepHtml}
           </div>
 
-          <!-- 4. ATR(14) -->
           <div class="q-card">
             <div class="q-card-head">
               <span>4. ATR(14) &amp; Daily Range Filter</span>
@@ -928,7 +1059,6 @@ HTML_CALCULATOR = """
             <div style="font-size: 0.78rem; color: var(--text-muted);">${data.volatility.note}</div>
           </div>
 
-          <!-- 5. Currency Strength -->
           <div class="q-card">
             <div class="q-card-head">
               <span>5. Live Currency Strength (0–10)</span>
@@ -943,7 +1073,6 @@ HTML_CALCULATOR = """
             <div class="csm-rank-strip">${chipsHtml}</div>
           </div>
 
-          <!-- 6. Seasonality -->
           <div class="q-card">
             <div class="q-card-head">
               <span>6. Quantitative Historical Edge</span>
@@ -969,9 +1098,16 @@ HTML_CALCULATOR = """
       }
     }
 
-    function onApiConnected() { runQuantFetch(); }
+    function onApiConnected() {
+      loadTopNewsBanner("{{ result.pair }}");
+      runQuantFetch();
+    }
     checkCorrelationGuard("{{ result.pair }}", "{{ result.side }}");
     runQuantFetch();
+    {% else %}
+    function onApiConnected() {
+      loadTopNewsBanner(document.getElementById("pairInput").value);
+    }
     {% endif %}
   </script>
 </body>
@@ -1010,8 +1146,9 @@ HTML_PORTFOLIO = """
         <div>
           <h3>Portofolio &amp; Kalender PnL</h3>
           <p>Auto-Settlement 00:00 WIB • Hapus Data Mentah +2 Jam</p>
+          <div id="lastCheckStatus" style="font-size:0.74rem; color:var(--neon-green); margin-top:4px;"></div>
         </div>
-        <button type="button" class="btn-outline-custom" style="padding:7px 10px; font-size:0.75rem;" onclick="loadPortfolio(true)">
+        <button type="button" id="btnCheckLive" class="btn-outline-custom" style="padding:8px 12px; font-size:0.78rem; white-space:nowrap;" onclick="loadPortfolio(true)">
           Cek Harga Live
         </button>
       </div>
@@ -1033,7 +1170,7 @@ HTML_PORTFOLIO = """
     let portfolioData = null;
     let equityChart = null;
     let viewYear = new Date().getFullYear();
-    let viewMonth = new Date().getMonth(); // 0-11
+    let viewMonth = new Date().getMonth();
 
     const BULAN_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
@@ -1082,8 +1219,8 @@ HTML_PORTFOLIO = """
       if (!grid || !title || !portfolioData) return;
 
       title.innerText = `${BULAN_ID[viewMonth]} ${viewYear}`;
-      const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Min..6=Sab
-      const mondayOffset = (firstDay + 6) % 7; // 0=Sen..6=Min
+      const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+      const mondayOffset = (firstDay + 6) % 7;
       const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
 
       let html = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(d => `<div class="cal-dow">${d}</div>`).join("");
@@ -1152,6 +1289,8 @@ HTML_PORTFOLIO = """
 
     async function loadPortfolio(forceCheck = false) {
       const container = document.getElementById("portfolioBody");
+      const btn = document.getElementById("btnCheckLive");
+      const statusEl = document.getElementById("lastCheckStatus");
       const apiBase = getQuantApiUrl();
 
       if (!apiBase) {
@@ -1166,11 +1305,25 @@ HTML_PORTFOLIO = """
         return;
       }
 
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = forceCheck ? "Mengecek..." : "Memuat...";
+      }
+      if (forceCheck && statusEl) {
+        statusEl.style.color = "#ffc107";
+        statusEl.innerText = "Menarik candle M15 live dari Render...";
+      }
+
       try {
         const resp = await fetch(`${apiBase}/api/portfolio?force=${forceCheck ? "1" : "0"}`);
         const data = await resp.json();
         if (!resp.ok || data.error) throw new Error(data.error || "Gagal memuat portofolio");
         portfolioData = data;
+
+        if (statusEl) {
+          statusEl.style.color = "#00e676";
+          statusEl.innerText = `✓ Terakhir dicek: ${data.checked_at_wib || data.server_wib}`;
+        }
 
         const s = data.summary;
         const zr = data.zigft_rules;
@@ -1228,7 +1381,6 @@ HTML_PORTFOLIO = """
 
           ${zr.cooldown_active ? `<div class="alert-box-warn" style="margin-bottom:14px;">🔒 ${zr.block_reason}</div>` : ""}
 
-          <!-- EQUITY CURVE -->
           <div class="q-card">
             <div class="q-card-head">
               <span>Equity Curve (Kumulatif Permanen)</span>
@@ -1239,7 +1391,6 @@ HTML_PORTFOLIO = """
             </div>
           </div>
 
-          <!-- KALENDER PNL HARIAN -->
           <div class="q-card">
             <div class="cal-header-bar">
               <button type="button" class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
@@ -1252,7 +1403,6 @@ HTML_PORTFOLIO = """
             </div>
           </div>
 
-          <!-- RIWAYAT ENTRY MENTAH (PRE-SETTLEMENT & BUFFER 2 JAM) -->
           <div class="q-card">
             <div class="q-card-head">
               <span>Riwayat Entry Mentah (Sementara)</span>
@@ -1265,12 +1415,21 @@ HTML_PORTFOLIO = """
         renderEquityChart();
         renderCalendarGrid();
       } catch (err) {
+        if (statusEl) {
+          statusEl.style.color = "#ff6b6b";
+          statusEl.innerText = `✕ Gagal cek: ${err.message}`;
+        }
         container.innerHTML = `
           <div class="q-card">
             <div style="font-size:0.82rem; color:#ff6b6b; margin-bottom:10px;">Gagal memuat portofolio: ${err.message}</div>
             <button type="button" class="btn btn-submit w-100" onclick="loadPortfolio(false)">Coba Lagi</button>
           </div>
         `;
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = "Cek Harga Live";
+        }
       }
     }
 
@@ -1281,7 +1440,6 @@ HTML_PORTFOLIO = """
 </html>
 """
 
-# Data resmi TF 2025
 TF_RULES = {
     "NZDUSD": {"vp": 2, "min_sl": 10, "max_sl": 200},
     "AUDUSD": {"vp": 2, "min_sl": 10, "max_sl": 200},
@@ -1381,4 +1539,3 @@ def portfolio():
 
 
 app = app
-
