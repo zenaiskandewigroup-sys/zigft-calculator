@@ -207,6 +207,7 @@ BASE_CSS = """
     font-size: 0.9rem;
     padding: 12px 14px;
     border-radius: 8px;
+    cursor: pointer;
     transition: all 0.2s ease;
   }
   .btn-neon:disabled {
@@ -241,6 +242,16 @@ BASE_CSS = """
     background: #090909;
     cursor: wait;
     transform: none;
+  }
+  .btn-mini-spin {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #444;
+    border-top-color: var(--neon-green);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
   }
 
   .result-wrapper, .quant-section {
@@ -786,7 +797,6 @@ HTML_CALCULATOR = """
       }
     }
 
-    // Muat hitung mundur news segera saat halaman dibuka
     loadTopNewsBanner("{{ result.pair if result else '' }}");
 
     {% if result %}
@@ -1142,15 +1152,20 @@ HTML_PORTFOLIO = """
     </div>
 
     <div class="dashboard-card">
-      <div class="header" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+      <div class="header" style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap;">
         <div>
           <h3>Portofolio &amp; Kalender PnL</h3>
           <p>Auto-Settlement 00:00 WIB • Hapus Data Mentah +2 Jam</p>
-          <div id="lastCheckStatus" style="font-size:0.74rem; color:var(--neon-green); margin-top:4px;"></div>
+          <div id="lastCheckStatus" style="font-size:0.75rem; color:var(--neon-green); margin-top:5px;">Menyiapkan koneksi...</div>
         </div>
-        <button type="button" id="btnCheckLive" class="btn-outline-custom" style="padding:8px 12px; font-size:0.78rem; white-space:nowrap;" onclick="loadPortfolio(true)">
-          Cek Harga Live
-        </button>
+        <div style="display:flex; gap:6px;">
+          <button type="button" class="btn-neon" style="padding:9px 11px; font-size:0.76rem; white-space:nowrap;" onclick="openManualModal()">
+            + Input Trade
+          </button>
+          <button type="button" id="btnCheckLive" class="btn-outline-custom" style="padding:9px 11px; font-size:0.76rem; white-space:nowrap;" onclick="loadPortfolio(true)">
+            Cek Harga Live
+          </button>
+        </div>
       </div>
 
       <div id="portfolioBody">
@@ -1164,6 +1179,103 @@ HTML_PORTFOLIO = """
     <footer>© 2025 MaelFX × Idris Lab | 1.00 Lot Auto-Price Settlement Engine</footer>
   </div>
 
+  <!-- MODAL INPUT TRADE LAMA (SUDAH TP/SL) ATAU MASIH BERJALAN -->
+  <div id="manualTradeModal" class="modal-overlay">
+    <div class="modal-container" style="height: auto; max-height: 92vh; overflow-y: auto; padding: 22px;">
+      <div class="modal-header" style="padding: 0 0 14px 0;">
+        <button class="close-modal-btn" onclick="closeManualModal()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <h4>Input Trade Lampau / Berjalan</h4>
+        <div style="width: 22px;"></div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <div class="mb-2">
+          <label class="form-label">Status Posisi Saat Ini</label>
+          <select id="bfOutcome" class="form-select" onchange="toggleBfTimeField()">
+            <option value="TP_HIT">Sudah TP (Masuk Kalender PnL Permanen)</option>
+            <option value="SL_HIT">Sudah SL (Masuk Kalender &amp; Hitung Kuota SL)</option>
+            <option value="OPEN">Masih Berjalan (Pantau dari Tanggal Entry)</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="mb-2">
+          <div>
+            <label class="form-label">Pair</label>
+            <select id="bfPair" class="form-select">
+              <option value="XAUUSD">XAUUSD</option>
+              <option value="EURUSD">EURUSD</option>
+              <option value="GBPUSD">GBPUSD</option>
+              <option value="AUDUSD">AUDUSD</option>
+              <option value="NZDUSD">NZDUSD</option>
+              <option value="USDJPY">USDJPY</option>
+              <option value="USDCAD">USDCAD</option>
+              <option value="USDCHF">USDCHF</option>
+              <option value="EURGBP">EURGBP</option>
+              <option value="EURJPY">EURJPY</option>
+              <option value="GBPJPY">GBPJPY</option>
+              <option value="AUDJPY">AUDJPY</option>
+              <option value="NZDJPY">NZDJPY</option>
+              <option value="CADJPY">CADJPY</option>
+              <option value="CHFJPY">CHFJPY</option>
+              <option value="EURNZD">EURNZD</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Side</label>
+            <select id="bfSide" class="form-select">
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Entry Price</label>
+          <input type="number" step="any" id="bfEntry" class="form-control" placeholder="contoh: 3544.74">
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="mb-2">
+          <div>
+            <label class="form-label">Stop Loss (SL)</label>
+            <input type="number" step="any" id="bfSl" class="form-control" placeholder="harga SL">
+          </div>
+          <div>
+            <label class="form-label">Take Profit (TP)</label>
+            <input type="number" step="any" id="bfTp" class="form-control" placeholder="harga TP">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="mb-3">
+          <div>
+            <label class="form-label">Tanggal Trade (WIB)</label>
+            <input type="date" id="bfDate" class="form-control">
+          </div>
+          <div id="bfTimeWrap" style="display:none;">
+            <label class="form-label">Jam Entry (WIB)</label>
+            <input type="time" id="bfTime" class="form-control" value="08:00">
+          </div>
+        </div>
+
+        <label class="gate-check">
+          <input type="checkbox" id="bfIdm">
+          <span><strong>Inducement (IDM)</strong> sudah tervalidasi</span>
+        </label>
+        <label class="gate-check">
+          <input type="checkbox" id="bfLiq">
+          <span><strong>Liquidity Pool / Sweep</strong> terkonfirmasi</span>
+        </label>
+
+        <div id="bfFeedback" style="font-size:0.79rem; margin:8px 0;"></div>
+
+        <button type="button" id="btnSubmitManual" class="btn btn-neon w-100" onclick="submitManualTrade()">
+          Simpan ke Portofolio &amp; Supabase
+        </button>
+      </div>
+    </div>
+  </div>
+
   {{ common_api_modal | safe }}
 
   <script>
@@ -1173,6 +1285,67 @@ HTML_PORTFOLIO = """
     let viewMonth = new Date().getMonth();
 
     const BULAN_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+    function openManualModal() {
+      const todayIso = new Date().toISOString().slice(0, 10);
+      document.getElementById("bfDate").value = todayIso;
+      document.getElementById("bfFeedback").innerText = "";
+      toggleBfTimeField();
+      document.getElementById("manualTradeModal").style.display = "flex";
+    }
+    function closeManualModal() {
+      document.getElementById("manualTradeModal").style.display = "none";
+    }
+    function toggleBfTimeField() {
+      const out = document.getElementById("bfOutcome").value;
+      document.getElementById("bfTimeWrap").style.display = (out === "OPEN") ? "block" : "none";
+    }
+
+    async function submitManualTrade() {
+      const apiBase = getQuantApiUrl();
+      const fb = document.getElementById("bfFeedback");
+      const btn = document.getElementById("btnSubmitManual");
+      if (!apiBase) { openApiModal(); return; }
+
+      btn.disabled = true;
+      btn.innerText = "Menyimpan ke Supabase...";
+      fb.style.color = "#ffc107";
+      fb.innerText = "Memproses data & menyinkronkan ke kalender...";
+
+      try {
+        const resp = await fetch(`${apiBase}/api/entries/manual`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            outcome: document.getElementById("bfOutcome").value,
+            pair: document.getElementById("bfPair").value,
+            side: document.getElementById("bfSide").value,
+            entry: parseFloat(document.getElementById("bfEntry").value || "0"),
+            sl: parseFloat(document.getElementById("bfSl").value || "0"),
+            tp: parseFloat(document.getElementById("bfTp").value || "0"),
+            trade_date: document.getElementById("bfDate").value,
+            trade_time: document.getElementById("bfTime").value,
+            inducement_confirmed: document.getElementById("bfIdm").checked,
+            liquidity_confirmed: document.getElementById("bfLiq").checked
+          })
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || "Gagal menyimpan trade");
+
+        fb.style.color = "#00e676";
+        fb.innerText = "✓ " + data.message;
+        setTimeout(() => {
+          closeManualModal();
+          loadPortfolio(false);
+        }, 900);
+      } catch (err) {
+        fb.style.color = "#ff6b6b";
+        fb.innerText = "✕ " + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Simpan ke Portofolio & Supabase";
+      }
+    }
 
     function formatSignedUsd(val) {
       const num = Number(val || 0);
@@ -1307,11 +1480,12 @@ HTML_PORTFOLIO = """
 
       if (btn) {
         btn.disabled = true;
-        btn.innerText = forceCheck ? "Mengecek..." : "Memuat...";
+        btn.classList.add("is-loading");
+        btn.innerHTML = `<span class="btn-mini-spin"></span> <span>${forceCheck ? "Cek Live..." : "Memuat..."}</span>`;
       }
-      if (forceCheck && statusEl) {
+      if (statusEl) {
         statusEl.style.color = "#ffc107";
-        statusEl.innerText = "Menarik candle M15 live dari Render...";
+        statusEl.innerText = forceCheck ? "⏳ Menarik candle M15 live dari Yahoo Finance..." : "⏳ Sinkronisasi data Supabase...";
       }
 
       try {
@@ -1428,6 +1602,7 @@ HTML_PORTFOLIO = """
       } finally {
         if (btn) {
           btn.disabled = false;
+          btn.classList.remove("is-loading");
           btn.innerText = "Cek Harga Live";
         }
       }
