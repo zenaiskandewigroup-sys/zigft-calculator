@@ -3,7 +3,6 @@ from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
 
-# URL Backend Render dibaca dari Environment Variable Vercel (atau diatur via tombol Quant API di UI)
 DEFAULT_QUANT_API = os.environ.get("QUANT_API_URL", "").strip().rstrip("/")
 
 
@@ -50,429 +49,401 @@ def assetlinks():
     }]
 
 
-HTML = """
+BASE_CSS = """
+  :root {
+    --bg-main: #000000;
+    --bg-card: #0a0a0a;
+    --border: #222222;
+    --border-focus: #444444;
+    --text-main: #ededed;
+    --text-muted: #888888;
+    --accent: #ffffff;
+    --accent-hover: #e0e0e0;
+    --neon-green: #00e676;
+    --danger: #f44336;
+    --warn: #ffc107;
+  }
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 15px 40px 15px;
+    margin: 0;
+  }
+  .container { max-width: 540px; width: 100%; position: relative; }
+  .top-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px;
+  }
+  .nav-tabs-wrap { display: flex; gap: 6px; flex: 1; }
+  .nav-pill {
+    flex: 1;
+    text-align: center;
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 9px 10px;
+    border-radius: 7px;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+  }
+  .nav-pill:hover { color: var(--text-main); }
+  .nav-pill.active {
+    background: #161616;
+    color: var(--neon-green);
+    border: 1px solid rgba(0, 230, 118, 0.25);
+  }
+  .api-config-btn {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 7px;
+    padding: 8px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+  .api-config-btn:hover { border-color: var(--border-focus); color: var(--text-main); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #555; }
+  .status-dot.active { background: var(--neon-green); box-shadow: 0 0 6px var(--neon-green); }
+
+  .dashboard-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 26px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  }
+  .header { margin-bottom: 22px; }
+  .header h3 {
+    color: var(--text-main);
+    font-weight: 700;
+    font-size: 1.35rem;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header p { color: var(--text-muted); font-size: 0.82rem; margin: 0; }
+  .form-label { color: var(--text-muted) !important; font-weight: 500; font-size: 0.83rem; margin-bottom: 6px; }
+  .form-control, .form-select {
+    background-color: var(--bg-main) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-main) !important;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+  }
+  .form-control:focus, .form-select:focus {
+    border-color: var(--border-focus) !important;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.05) !important;
+  }
+  .form-control::placeholder { color: #444 !important; }
+  #pairInput { cursor: pointer; }
+
+  .btn-submit {
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+    border: none;
+    font-size: 0.95rem;
+    padding: 13px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+  }
+  .btn-submit:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .btn-neon {
+    background: var(--neon-green);
+    color: #000;
+    font-weight: 700;
+    border: none;
+    font-size: 0.9rem;
+    padding: 12px 14px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+  .btn-neon:disabled {
+    background: #1b1b1b;
+    color: #555;
+    cursor: not-allowed;
+  }
+  .btn-outline-custom {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 11px 14px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+  }
+  .btn-outline-custom:disabled { color: #444; border-color: #181818; cursor: not-allowed; }
+
+  .result-wrapper, .quant-section {
+    margin-top: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+  }
+  .result-header, .quant-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .data-item {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .data-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .data-value { font-size: 1.05rem; font-weight: 600; color: var(--text-main); }
+  .val-container { display: flex; align-items: center; justify-content: space-between; }
+  .copy-btn {
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    padding: 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+  }
+  .copy-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
+
+  .status-badge {
+    margin-top: 16px; padding: 12px; border-radius: 8px; font-weight: 500; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .status-valid { background: rgba(40, 167, 69, 0.1); color: #4caf50; border: 1px solid rgba(40, 167, 69, 0.2); }
+  .status-invalid { background: rgba(220, 53, 69, 0.1); color: #f44336; border: 1px solid rgba(220, 53, 69, 0.2); }
+
+  .quant-tag {
+    font-size: 0.7rem; padding: 3px 8px; border-radius: 6px;
+    background: rgba(0, 230, 118, 0.12); color: var(--neon-green);
+    border: 1px solid rgba(0, 230, 118, 0.25); font-weight: 600;
+  }
+  .q-card {
+    background: var(--bg-main);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .q-card:last-child { margin-bottom: 0; }
+  .q-card-head {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    margin-bottom: 8px; font-size: 0.76rem; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .q-pill { font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+  .pill-green { background: rgba(76, 175, 80, 0.15); color: #4caf50; border: 1px solid rgba(76, 175, 80, 0.3); }
+  .pill-yellow { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
+  .pill-red { background: rgba(244, 67, 54, 0.15); color: #f44336; border: 1px solid rgba(244, 67, 54, 0.3); }
+  .pill-neutral { background: rgba(255, 255, 255, 0.08); color: #ccc; border: 1px solid #333; }
+
+  .liq-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+  .liq-box { background: #0a0a0a; border: 1px solid #1e1e1e; border-radius: 6px; padding: 8px; text-align: center; }
+  .liq-lbl { font-size: 0.66rem; color: var(--text-muted); }
+  .liq-val { font-size: 0.83rem; font-weight: 600; color: var(--text-main); margin-top: 2px; }
+
+  .progress-track { width: 100%; height: 6px; background: #1a1a1a; border-radius: 4px; overflow: hidden; margin: 8px 0; }
+  .progress-fill { height: 100%; background: var(--neon-green); transition: width 0.4s ease; }
+
+  .csm-bar-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.85rem; margin-top: 6px; }
+  .csm-rank-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #222; }
+  .csm-chip { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; background: #111; border: 1px solid #262626; color: #bbb; }
+  .alert-box-warn {
+    margin-top: 8px; padding: 8px 10px; border-radius: 6px;
+    background: rgba(244, 67, 54, 0.12); border: 1px solid rgba(244, 67, 54, 0.3);
+    color: #ff6b6b; font-size: 0.79rem;
+  }
+
+  .gate-check {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: #0d0d0d; border: 1px solid #222; border-radius: 8px;
+    margin-bottom: 8px; cursor: pointer; font-size: 0.83rem;
+  }
+  .gate-check input { width: 16px; height: 16px; accent-color: var(--neon-green); cursor: pointer; }
+
+  .spinner-box { text-align: center; padding: 20px 10px; color: var(--text-muted); font-size: 0.84rem; }
+  .spinner-ring {
+    width: 22px; height: 22px; border: 2px solid #333; border-top-color: var(--neon-green);
+    border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 10px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85); z-index: 9999; align-items: center; justify-content: center;
+    backdrop-filter: blur(5px);
+  }
+  .modal-container {
+    background: var(--bg-main); width: 100%; max-width: 520px; height: 100%; max-height: 100vh;
+    display: flex; flex-direction: column; animation: slideUp 0.25s ease-out;
+  }
+  @media (min-width: 521px) {
+    .modal-container { height: 85vh; border-radius: 12px; border: 1px solid var(--border); }
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-header { display: flex; align-items: center; padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .modal-header h4 { margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--text-main); flex: 1; text-align: center; }
+  .close-modal-btn { background: none; border: none; color: var(--text-main); padding: 5px; cursor: pointer; display: flex; align-items: center; }
+  .modal-search-wrapper { padding: 14px 20px; border-bottom: 1px solid var(--border); position: relative; }
+  .modal-search-icon { position: absolute; left: 35px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+  .modal-search-wrapper input {
+    width: 100%; padding: 11px 16px 11px 42px; background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text-main); border-radius: 8px; font-size: 0.92rem; outline: none;
+  }
+  .list-header {
+    display: flex; justify-content: space-between; padding: 10px 24px; font-size: 0.75rem;
+    color: var(--text-muted); text-transform: uppercase; background: var(--bg-card); border-bottom: 1px solid var(--border);
+  }
+  .modal-list { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+  .symbol-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 24px; border-bottom: 1px solid var(--border); cursor: pointer;
+  }
+  .symbol-item:hover { background: var(--bg-card); }
+  .symbol-item .pair-name { font-weight: 500; font-size: 0.98rem; color: var(--text-main); }
+  .symbol-item .pair-vp { color: var(--text-muted); font-size: 0.92rem; }
+
+  /* PnL Calendar Grid */
+  .cal-header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .cal-nav-btn {
+    background: #121212; border: 1px solid #262626; color: var(--text-main);
+    border-radius: 6px; padding: 5px 11px; font-size: 0.85rem; cursor: pointer;
+  }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .cal-dow { text-align: center; font-size: 0.7rem; color: var(--text-muted); padding-bottom: 4px; font-weight: 600; }
+  .cal-cell {
+    background: #0e0e0e; border: 1px solid #1e1e1e; border-radius: 7px; min-height: 54px;
+    padding: 5px 4px; display: flex; flex-direction: column; justify-content: space-between;
+    align-items: center; cursor: pointer; transition: transform 0.15s ease;
+  }
+  .cal-cell:hover { transform: scale(1.03); }
+  .cal-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+  .cal-cell.profit {
+    background: rgba(0, 230, 118, 0.14);
+    border-color: rgba(0, 230, 118, 0.45);
+  }
+  .cal-cell.loss {
+    background: rgba(244, 67, 54, 0.15);
+    border-color: rgba(244, 67, 54, 0.45);
+  }
+  .cal-day-num { font-size: 0.7rem; color: var(--text-muted); align-self: flex-start; padding-left: 2px; }
+  .cal-pnl-txt { font-size: 0.72rem; font-weight: 700; text-align: center; line-height: 1.1; }
+  .cal-cell.profit .cal-pnl-txt { color: var(--neon-green); }
+  .cal-cell.loss .cal-pnl-txt { color: #ff6b6b; }
+
+  footer { margin-top: 28px; text-align: center; font-size: 0.78rem; color: #555; }
+"""
+
+
+COMMON_API_MODAL = """
+  <div id="apiModal" class="modal-overlay">
+    <div class="modal-container" style="height: auto; max-height: 90vh; padding: 24px;">
+      <div class="modal-header" style="padding: 0 0 16px 0;">
+        <button class="close-modal-btn" onclick="closeApiModal()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <h4>Koneksi Render Quant Engine</h4>
+        <div style="width: 22px;"></div>
+      </div>
+      <div style="margin-top: 16px;">
+        <label class="form-label">URL Backend Render Anda</label>
+        <input type="url" id="renderUrlInput" class="form-control" placeholder="https://zigft-calculator-backend.onrender.com">
+        <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 8px;">
+          URL tersimpan otomatis di browser perangkat ini dan menghubungkan Kalkulator Quant, Prediksi News, serta Kalender PnL.
+        </p>
+        <button type="button" class="btn btn-submit w-100" onclick="saveRenderUrl()">Simpan &amp; Hubungkan</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ENV_QUANT_API = "{{ default_quant_api }}";
+    function getQuantApiUrl() {
+      const saved = localStorage.getItem("zigft_quant_api_url");
+      if (saved && saved.trim() !== "") return saved.trim().replace(/\/+$/, "");
+      return ENV_QUANT_API;
+    }
+    function updateStatusDot() {
+      const dot = document.getElementById("quantStatusDot");
+      if (!dot) return;
+      if (getQuantApiUrl()) dot.classList.add("active");
+      else dot.classList.remove("active");
+    }
+    function openApiModal() {
+      document.getElementById("renderUrlInput").value = getQuantApiUrl();
+      document.getElementById("apiModal").style.display = "flex";
+    }
+    function closeApiModal() {
+      document.getElementById("apiModal").style.display = "none";
+    }
+    function saveRenderUrl() {
+      const val = document.getElementById("renderUrlInput").value.trim().replace(/\/+$/, "");
+      localStorage.setItem("zigft_quant_api_url", val);
+      updateStatusDot();
+      closeApiModal();
+      if (typeof onApiConnected === "function") onApiConnected();
+    }
+    updateStatusDot();
+  </script>
+"""
+
+
+HTML_CALCULATOR = """
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <link rel="manifest" href="/manifest.json">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trader Family Auto Price v9.0</title>
+  <title>ZIGFT Terminal | TF 2025 Quant Calculator</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg-main: #000000;
-      --bg-card: #0a0a0a;
-      --border: #222222;
-      --border-focus: #444444;
-      --text-main: #ededed;
-      --text-muted: #888888;
-      --accent: #ffffff;
-      --accent-hover: #e0e0e0;
-      --neon-green: #00e676;
-    }
-    body { 
-      background-color: var(--bg-main); 
-      color: var(--text-main); 
-      font-family: 'Inter', sans-serif; 
-      min-height: 100vh; 
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 15px;
-      margin: 0;
-    }
-    .container { max-width: 520px; width: 100%; position: relative; }
-    .dashboard-card { 
-      background: var(--bg-card); 
-      border: 1px solid var(--border); 
-      border-radius: 12px; 
-      padding: 32px; 
-      box-shadow: 0 8px 30px rgba(0,0,0,0.6); 
-    }
-    .header { margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-    .header h3 { 
-      color: var(--text-main); 
-      font-weight: 700; 
-      font-size: 1.4rem; 
-      margin-bottom: 6px; 
-      display: flex; 
-      align-items: center; 
-      gap: 10px;
-    }
-    .header p { 
-      color: var(--text-muted); 
-      font-size: 0.85rem; 
-      font-weight: 400; 
-      margin: 0; 
-    }
-    .api-config-btn {
-      background: var(--bg-main);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      border-radius: 8px;
-      padding: 8px 10px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.75rem;
-      white-space: nowrap;
-      transition: all 0.2s ease;
-    }
-    .api-config-btn:hover { border-color: var(--border-focus); color: var(--text-main); }
-    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #555; }
-    .status-dot.active { background: var(--neon-green); box-shadow: 0 0 6px var(--neon-green); }
-
-    .form-label { 
-      color: var(--text-muted) !important; 
-      font-weight: 500; 
-      font-size: 0.85rem;
-      margin-bottom: 8px;
-    }
-    .form-control, .form-select { 
-      background-color: var(--bg-main) !important; 
-      border: 1px solid var(--border) !important; 
-      color: var(--text-main) !important; 
-      border-radius: 8px;
-      padding: 12px 16px;
-      font-size: 0.95rem;
-      transition: all 0.2s ease;
-    }
-    .form-control:focus, .form-select:focus { 
-      border-color: var(--border-focus) !important; 
-      box-shadow: 0 0 0 3px rgba(255,255,255,0.05) !important; 
-    }
-    .form-control::placeholder { color: #444 !important; }
-    #pairInput { cursor: pointer; }
-
-    .btn-submit { 
-      background: var(--accent); 
-      color: #000; 
-      font-weight: 600; 
-      border: none; 
-      font-size: 0.95rem; 
-      padding: 14px;
-      border-radius: 8px;
-      transition: all 0.2s ease;
-      margin-top: 10px;
-    }
-    .btn-submit:hover { 
-      background: var(--accent-hover); 
-      transform: translateY(-1px);
-    }
-    .result-wrapper { 
-      margin-top: 24px; 
-      background: var(--bg-card); 
-      border: 1px solid var(--border); 
-      border-radius: 12px; 
-      padding: 24px; 
-    }
-    .result-header {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--text-main);
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .result-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    .data-item {
-      background: var(--bg-main);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-    }
-    .data-label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 4px;
-    }
-    .data-value {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-    .val-container {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .copy-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 6px;
-      border-radius: 6px;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .copy-btn:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-main); }
-    .copy-btn:active { transform: scale(0.95); }
-    
-    .status-badge {
-      margin-top: 20px;
-      padding: 14px;
-      border-radius: 8px;
-      font-weight: 500;
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-    .status-valid {
-      background: rgba(40, 167, 69, 0.1);
-      color: #4caf50;
-      border: 1px solid rgba(40, 167, 69, 0.2);
-    }
-    .status-invalid {
-      background: rgba(220, 53, 69, 0.1);
-      color: #f44336;
-      border: 1px solid rgba(220, 53, 69, 0.2);
-    }
-
-    /* ========================================= */
-    /* QUANT MARKET INTELLIGENCE PANEL           */
-    /* ========================================= */
-    .quant-section {
-      margin-top: 20px;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-    }
-    .quant-title {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--text-main);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-    .quant-tag {
-      font-size: 0.7rem;
-      padding: 3px 8px;
-      border-radius: 6px;
-      background: rgba(0, 230, 118, 0.12);
-      color: var(--neon-green);
-      border: 1px solid rgba(0, 230, 118, 0.25);
-      font-weight: 600;
-    }
-    .q-card {
-      background: var(--bg-main);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px;
-      margin-bottom: 12px;
-    }
-    .q-card:last-child { margin-bottom: 0; }
-    .q-card-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-    .q-pill {
-      font-size: 0.7rem;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 4px;
-      white-space: nowrap;
-    }
-    .pill-green { background: rgba(76, 175, 80, 0.15); color: #4caf50; border: 1px solid rgba(76, 175, 80, 0.3); }
-    .pill-yellow { background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3); }
-    .pill-red { background: rgba(244, 67, 54, 0.15); color: #f44336; border: 1px solid rgba(244, 67, 54, 0.3); }
-    .pill-neutral { background: rgba(255, 255, 255, 0.08); color: #ccc; border: 1px solid #333; }
-
-    .liq-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .liq-box {
-      background: #0a0a0a;
-      border: 1px solid #1e1e1e;
-      border-radius: 6px;
-      padding: 8px;
-      text-align: center;
-    }
-    .liq-lbl { font-size: 0.68rem; color: var(--text-muted); }
-    .liq-val { font-size: 0.85rem; font-weight: 600; color: var(--text-main); margin-top: 2px; }
-
-    .progress-track {
-      width: 100%;
-      height: 6px;
-      background: #1a1a1a;
-      border-radius: 4px;
-      overflow: hidden;
-      margin: 8px 0;
-    }
-    .progress-fill {
-      height: 100%;
-      background: var(--neon-green);
-      transition: width 0.4s ease;
-    }
-    .csm-bar-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 0.85rem;
-      margin-top: 6px;
-    }
-    .csm-rank-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px dashed #222;
-    }
-    .csm-chip {
-      font-size: 0.7rem;
-      padding: 2px 6px;
-      border-radius: 4px;
-      background: #111;
-      border: 1px solid #262626;
-      color: #bbb;
-    }
-    .alert-box-warn {
-      margin-top: 8px;
-      padding: 8px 10px;
-      border-radius: 6px;
-      background: rgba(244, 67, 54, 0.12);
-      border: 1px solid rgba(244, 67, 54, 0.3);
-      color: #ff6b6b;
-      font-size: 0.8rem;
-    }
-    .spinner-box {
-      text-align: center;
-      padding: 20px 10px;
-      color: var(--text-muted);
-      font-size: 0.85rem;
-    }
-    .spinner-ring {
-      width: 22px;
-      height: 22px;
-      border: 2px solid #333;
-      border-top-color: var(--neon-green);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin: 0 auto 10px auto;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    footer { margin-top: 32px; text-align: center; font-size: 0.8rem; color: #555; }
-
-    /* ========================================= */
-    /* MODAL SYMBOL SELECTION & API SETTINGS     */
-    /* ========================================= */
-    .modal-overlay {
-      display: none; 
-      position: fixed; 
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      z-index: 9999;
-      align-items: center; 
-      justify-content: center;
-      backdrop-filter: blur(5px);
-    }
-    .modal-container {
-      background: var(--bg-main);
-      width: 100%; max-width: 520px;
-      height: 100%; max-height: 100vh;
-      display: flex; flex-direction: column;
-      animation: slideUp 0.25s ease-out;
-    }
-    @media (min-width: 521px) {
-      .modal-container {
-        height: 85vh;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-      }
-    }
-    @keyframes slideUp {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    .modal-header {
-      display: flex; align-items: center;
-      padding: 18px 20px; border-bottom: 1px solid var(--border);
-    }
-    .modal-header h4 {
-      margin: 0; font-size: 1.1rem; font-weight: 600; color: var(--text-main); flex: 1; text-align: center;
-    }
-    .close-modal-btn {
-      background: none; border: none; color: var(--text-main); padding: 5px; cursor: pointer; display: flex; align-items: center;
-    }
-    .modal-search-wrapper {
-      padding: 16px 20px; border-bottom: 1px solid var(--border); position: relative;
-    }
-    .modal-search-icon {
-      position: absolute; left: 35px; top: 50%; transform: translateY(-50%); color: var(--text-muted);
-    }
-    .modal-search-wrapper input {
-      width: 100%; padding: 12px 16px 12px 42px;
-      background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main);
-      border-radius: 8px; font-size: 0.95rem; outline: none;
-    }
-    .modal-search-wrapper input:focus { border-color: var(--border-focus); }
-    .list-header {
-      display: flex; justify-content: space-between; padding: 10px 24px;
-      font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
-      background: var(--bg-card); border-bottom: 1px solid var(--border);
-    }
-    .modal-list { flex: 1; overflow-y: auto; padding-bottom: 20px; }
-    .symbol-item {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 16px 24px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.2s;
-    }
-    .symbol-item:hover { background: var(--bg-card); }
-    .symbol-item .pair-name { font-weight: 500; font-size: 1rem; color: var(--text-main); }
-    .symbol-item .pair-vp { color: var(--text-muted); font-size: 0.95rem; }
-    .modal-list::-webkit-scrollbar { width: 6px; }
-    .modal-list::-webkit-scrollbar-track { background: transparent; }
-    .modal-list::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-  </style>
+  <style>{{ base_css | safe }}</style>
 </head>
 <body>
   <div class="container">
+    <div class="top-nav">
+      <div class="nav-tabs-wrap">
+        <a href="/" class="nav-pill active">Kalkulator &amp; Quant</a>
+        <a href="/portfolio" class="nav-pill">Kalender PnL &amp; Curve</a>
+      </div>
+      <button type="button" class="api-config-btn" onclick="openApiModal()">
+        <span id="quantStatusDot" class="status-dot"></span>
+        <span>Quant API</span>
+      </button>
+    </div>
+
     <div class="dashboard-card">
       <div class="header">
-        <div>
-          <h3>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            Auto Price v9.0
-          </h3>
-          <p>RR Smart Mode | TF Official System 2025 | Auto Value Pair</p>
-        </div>
-        <button type="button" class="api-config-btn" onclick="openApiModal()" title="Konfigurasi Render Quant Engine">
-          <span id="quantStatusDot" class="status-dot"></span>
-          <span>Quant API</span>
-        </button>
+        <h3>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          Auto Price v9.0
+        </h3>
+        <p>SMC OTE • Pre-News Bot • ZIGFT Rule Enforcer • TF 2025</p>
       </div>
 
       <form method="POST" onsubmit="return validatePairForm()">
@@ -489,13 +460,13 @@ HTML = """
         </div>
         <div class="mb-3">
           <label class="form-label">Entry Price</label>
-          <input type="number" step="any" name="entry" class="form-control" placeholder="contoh: 4060.52 atau 0.65352" value="{{ result.entry if result else '' }}" required>
+          <input type="number" step="any" name="entry" class="form-control" placeholder="contoh: 2650.50 atau 0.65352" value="{{ result.entry if result else '' }}" required>
         </div>
         <div class="mb-3">
           <label class="form-label">RR (1 - 3)</label>
-          <input type="number" step="0.1" name="rr" class="form-control" placeholder="contoh: 2.5" value="{{ result.rr if result else '' }}" required>
+          <input type="number" step="0.1" name="rr" class="form-control" placeholder="contoh: 3" value="{{ result.rr if result else '' }}" required>
         </div>
-        <button type="submit" class="btn btn-submit w-100">Hitung SL/TP</button>
+        <button type="submit" class="btn btn-submit w-100">Hitung SL/TP &amp; Analisis Quant</button>
       </form>
     </div>
 
@@ -503,7 +474,7 @@ HTML = """
     <div class="result-wrapper">
       <div class="result-header">
         <span>Hasil Perhitungan</span>
-        <span style="font-size: 0.78rem; color: var(--neon-green); font-weight: 500;">{{ result.pair }} • 1:{{ result.rr }}</span>
+        <span style="font-size: 0.78rem; color: var(--neon-green); font-weight: 600;">{{ result.pair }} • 1:{{ result.rr }}</span>
       </div>
       <div class="result-grid">
         <div class="data-item">
@@ -512,87 +483,107 @@ HTML = """
         </div>
         <div class="data-item">
           <div class="data-label">Side / RR</div>
-          <div class="data-value">{{ result.side.upper() }} <span style="font-size: 0.9rem; color: #888;">(1:{{ result.rr }})</span></div>
+          <div class="data-value">{{ result.side.upper() }} <span style="font-size: 0.85rem; color: #888;">(1:{{ result.rr }})</span></div>
         </div>
-        
         <div class="data-item">
           <div class="data-label">Entry</div>
           <div class="val-container">
             <div class="data-value">{{ result.entry }}</div>
             <button type="button" class="copy-btn" onclick="copyText('{{ result.entry }}', this)" title="Salin Entry">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
           </div>
         </div>
-        
         <div class="data-item">
           <div class="data-label">Value Pair</div>
           <div class="data-value">{{ result.value_pair }}</div>
         </div>
-        
         <div class="data-item" style="border-color: rgba(244, 67, 54, 0.3);">
           <div class="data-label" style="color: #f44336;">Stop Loss (SL)</div>
           <div class="val-container">
             <div>
-              <span class="data-value">{{ result.sl }}</span> 
-              <br>
-              <span style="font-size: 0.8rem; color: #888; font-weight: 400;">(-{{ result.sl_pips }} pips)</span>
+              <span class="data-value">{{ result.sl }}</span><br>
+              <span style="font-size: 0.78rem; color: #888;">(-{{ result.sl_pips }} pips)</span>
             </div>
-            <button type="button" class="copy-btn" onclick="copyText('{{ result.sl }}', this)" title="Salin Stop Loss">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <button type="button" class="copy-btn" onclick="copyText('{{ result.sl }}', this)" title="Salin SL">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
           </div>
         </div>
-        
         <div class="data-item" style="border-color: rgba(76, 175, 80, 0.3);">
           <div class="data-label" style="color: #4caf50;">Take Profit (TP)</div>
           <div class="val-container">
             <div>
-              <span class="data-value">{{ result.tp }}</span> 
-              <br>
-              <span style="font-size: 0.8rem; color: #888; font-weight: 400;">(+{{ result.tp_pips }} pips)</span>
+              <span class="data-value">{{ result.tp }}</span><br>
+              <span style="font-size: 0.78rem; color: #888;">(+{{ result.tp_pips }} pips)</span>
             </div>
-            <button type="button" class="copy-btn" onclick="copyText('{{ result.tp }}', this)" title="Salin Take Profit">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <button type="button" class="copy-btn" onclick="copyText('{{ result.tp }}', this)" title="Salin TP">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
           </div>
         </div>
       </div>
-      
+
       {% if result.valid %}
         <div class="status-badge status-valid">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
           Valid TF 2025 ({{ result.validation_text }})
         </div>
       {% else %}
         <div class="status-badge status-invalid">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
           Tidak Valid TF 2025 ({{ result.validation_text }})
         </div>
       {% endif %}
+
+      <!-- ZIGFT ANALYST SYSTEM RULE ENFORCER & PORTFOLIO LOGGER -->
+      <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:0.78rem; font-weight:600; color:var(--text-muted); text-transform:uppercase;">ZIGFT Structure &amp; Discipline Gate</span>
+          <span id="ruleQuotaBadge" class="q-pill pill-neutral">Checking Quota...</span>
+        </div>
+
+        <div id="cooldownBanner"></div>
+
+        <label class="gate-check">
+          <input type="checkbox" id="chkIdm" onchange="updateActionGate()">
+          <span><strong>Inducement (IDM)</strong> sudah tervalidasi pada struktur</span>
+        </label>
+        <label class="gate-check">
+          <input type="checkbox" id="chkLiq" onchange="updateActionGate()">
+          <span><strong>Liquidity Pool / Sweep</strong> sudah terkonfirmasi</span>
+        </label>
+
+        <div id="lotSimBox" style="font-size:0.78rem; color:var(--text-muted); margin: 8px 0 10px 0;"></div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <button type="button" id="btnCopySignal" class="btn-outline-custom" disabled onclick="copyFullSignal(this)">
+            Salin Format Signal
+          </button>
+          <button type="button" id="btnLogEntry" class="btn-neon" disabled onclick="logEntryToPortfolio()">
+            Catat Entry (1 Lot)
+          </button>
+        </div>
+        <div id="logFeedback" style="font-size:0.8rem; margin-top:8px;"></div>
+      </div>
     </div>
 
-    <!-- PANEL QUANT MARKET INTELLIGENCE (RENDER LIVE + CORRELATION GUARD) -->
+    <!-- PANEL QUANT MARKET INTELLIGENCE -->
     <div class="quant-section" id="quantPanel">
       <div class="quant-title">
         <span>Quant Market Intelligence</span>
         <span class="quant-tag" id="quantSourceTag">LIVE FEED</span>
       </div>
-
-      <!-- Correlation Guard (Client-side Session Exposure) -->
       <div id="correlationBox"></div>
-
-      <!-- Konten Dinamis dari Render API -->
       <div id="quantDynamicBody">
         <div class="spinner-box">
           <div class="spinner-ring"></div>
-          <div>Mengambil data likuiditas, ATR-14, CSM &amp; probabilitas dari Render...</div>
+          <div>Menganalisis Pre-News Bot, SMC OTE 50%–75%, Likuiditas &amp; ATR-14...</div>
         </div>
       </div>
     </div>
     {% endif %}
 
-    <footer>© 2025 MaelFX × Idris Lab | TF 2025 System Integrated</footer>
+    <footer>© 2025 MaelFX × Idris Lab | TF 2025 &amp; ZIGFT System Integrated</footer>
   </div>
 
   <!-- POP-UP MODAL SYMBOL SELECTION -->
@@ -605,17 +596,14 @@ HTML = """
         <h4>Pilih Symbol</h4>
         <div style="width: 24px;"></div>
       </div>
-      
       <div class="modal-search-wrapper">
         <svg class="modal-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input type="text" id="searchInput" placeholder="Cari Symbol..." onkeyup="filterSymbols()">
       </div>
-      
       <div class="list-header">
         <span>Symbols/Pair</span>
         <span>Value Pair</span>
       </div>
-      
       <div class="modal-list" id="symbolList">
         {% for pair_name, rule_data in tf_rules.items() %}
         <div class="symbol-item" onclick="selectPair('{{ pair_name }}')">
@@ -627,131 +615,120 @@ HTML = """
     </div>
   </div>
 
-  <!-- MODAL KONFIGURASI RENDER QUANT API URL -->
-  <div id="apiModal" class="modal-overlay">
-    <div class="modal-container" style="height: auto; max-height: 90vh; padding: 24px;">
-      <div class="modal-header" style="padding: 0 0 16px 0;">
-        <button class="close-modal-btn" onclick="closeApiModal()">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-        <h4>Koneksi Render Quant Engine</h4>
-        <div style="width: 22px;"></div>
-      </div>
-      <div style="margin-top: 16px;">
-        <label class="form-label">URL Backend Render Anda</label>
-        <input type="url" id="renderUrlInput" class="form-control" placeholder="https://zigft-quant-engine.onrender.com">
-        <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: 8px;">
-          Masukkan URL Web Service Render Anda (atau atur Environment Variable <code>QUANT_API_URL</code> di Vercel). Tersimpan otomatis di browser HP ini.
-        </p>
-        <button type="button" class="btn btn-submit w-100" onclick="saveRenderUrl()">Simpan &amp; Hubungkan</button>
-      </div>
-    </div>
-  </div>
+  {{ common_api_modal | safe }}
 
   <script>
-    const ENV_QUANT_API = "{{ default_quant_api }}";
-
     function validatePairForm() {
-      const pairVal = document.getElementById("pairInput").value.trim();
-      if (!pairVal) {
+      if (!document.getElementById("pairInput").value.trim()) {
         openModal();
         return false;
       }
       return true;
     }
-
-    function getQuantApiUrl() {
-      const saved = localStorage.getItem("zigft_quant_api_url");
-      if (saved && saved.trim() !== "") return saved.trim().replace(/\/+$/, "");
-      return ENV_QUANT_API;
-    }
-
-    function updateStatusDot() {
-      const dot = document.getElementById("quantStatusDot");
-      if (!dot) return;
-      if (getQuantApiUrl()) {
-        dot.classList.add("active");
-      } else {
-        dot.classList.remove("active");
-      }
-    }
-
-    function openApiModal() {
-      document.getElementById("renderUrlInput").value = getQuantApiUrl();
-      document.getElementById("apiModal").style.display = "flex";
-    }
-
-    function closeApiModal() {
-      document.getElementById("apiModal").style.display = "none";
-    }
-
-    function saveRenderUrl() {
-      const val = document.getElementById("renderUrlInput").value.trim().replace(/\/+$/, "");
-      localStorage.setItem("zigft_quant_api_url", val);
-      updateStatusDot();
-      closeApiModal();
-      if (typeof runQuantFetch === "function") runQuantFetch();
-    }
-
-    // Copy Function
     function copyText(text, btnElement) {
       navigator.clipboard.writeText(text).then(() => {
-        const originalSVG = btnElement.innerHTML;
-        btnElement.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-        setTimeout(() => { btnElement.innerHTML = originalSVG; }, 1500);
-      }).catch(err => {
-        console.error('Gagal menyalin teks: ', err);
-        alert('Gagal menyalin. Silakan copy manual.');
+        const orig = btnElement.innerHTML;
+        btnElement.innerHTML = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#4caf50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        setTimeout(() => { btnElement.innerHTML = orig; }, 1500);
       });
     }
-
-    // Modal Control Functions
     function openModal() {
       document.getElementById('symbolModal').style.display = 'flex';
-      document.body.style.overflow = 'hidden'; 
+      document.body.style.overflow = 'hidden';
     }
-
     function closeModal() {
       document.getElementById('symbolModal').style.display = 'none';
       document.body.style.overflow = 'auto';
     }
-
     function selectPair(pairName) {
       document.getElementById('pairInput').value = pairName;
       closeModal();
     }
-
     function filterSymbols() {
-      let input = document.getElementById('searchInput');
-      let filter = input.value.toUpperCase();
-      let list = document.getElementById('symbolList');
-      let items = list.getElementsByClassName('symbol-item');
-
+      const filter = document.getElementById('searchInput').value.toUpperCase();
+      const items = document.getElementById('symbolList').getElementsByClassName('symbol-item');
       for (let i = 0; i < items.length; i++) {
-        let pairName = items[i].getElementsByClassName('pair-name')[0].innerText;
-        if (pairName.toUpperCase().indexOf(filter) > -1) {
-          items[i].style.display = "flex";
-        } else {
-          items[i].style.display = "none";
-        }
+        const name = items[i].getElementsByClassName('pair-name')[0].innerText;
+        items[i].style.display = name.toUpperCase().indexOf(filter) > -1 ? "flex" : "none";
       }
     }
 
-    updateStatusDot();
-
     {% if result %}
-    // =========================================
-    // CORRELATION EXPOSURE GUARD (LOCAL SESSION)
-    // =========================================
+    let latestQuantData = null;
+
+    function updateActionGate() {
+      const idmChecked = document.getElementById("chkIdm").checked;
+      const liqChecked = document.getElementById("chkLiq").checked;
+      const structureValid = idmChecked && liqChecked;
+
+      document.getElementById("btnCopySignal").disabled = !structureValid;
+
+      const canEnter = latestQuantData && latestQuantData.zigft_rules ? latestQuantData.zigft_rules.can_enter : true;
+      document.getElementById("btnLogEntry").disabled = !(structureValid && canEnter);
+    }
+
+    function copyFullSignal(btn) {
+      const txt = [
+        `PAIR: {{ result.pair }}`,
+        `ORDER: {{ result.side.upper() }} (RR 1:{{ result.rr }})`,
+        `ENTRY: {{ result.entry }}`,
+        `SL: {{ result.sl }} (-{{ result.sl_pips }} pips)`,
+        `TP: {{ result.tp }} (+{{ result.tp_pips }} pips)`,
+        `VALIDASI: IDM + Liquidity Confirmed | ZIGFT System`
+      ].join("\\n");
+      navigator.clipboard.writeText(txt).then(() => {
+        const orig = btn.innerText;
+        btn.innerText = "✓ Tersalin!";
+        setTimeout(() => { btn.innerText = orig; }, 1500);
+      });
+    }
+
+    async function logEntryToPortfolio() {
+      const apiBase = getQuantApiUrl();
+      const fb = document.getElementById("logFeedback");
+      const btn = document.getElementById("btnLogEntry");
+      if (!apiBase) { openApiModal(); return; }
+
+      btn.disabled = true;
+      fb.style.color = "#888";
+      fb.innerText = "Mencatat entry ke sistem pemantauan harga...";
+
+      try {
+        const resp = await fetch(`${apiBase}/api/entries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pair: "{{ result.pair }}",
+            side: "{{ result.side }}",
+            entry: {{ result.entry }},
+            sl: {{ result.sl }},
+            tp: {{ result.tp }},
+            sl_pips: {{ result.sl_pips }},
+            tp_pips: {{ result.tp_pips }},
+            rr: {{ result.rr }},
+            inducement_confirmed: document.getElementById("chkIdm").checked,
+            liquidity_confirmed: document.getElementById("chkLiq").checked
+          })
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || "Gagal mencatat entry");
+
+        fb.style.color = "#00e676";
+        fb.innerText = "✓ " + data.message;
+        runQuantFetch();
+      } catch (err) {
+        fb.style.color = "#ff6b6b";
+        fb.innerText = "✕ " + err.message;
+        updateActionGate();
+      }
+    }
+
     function checkCorrelationGuard(pair, side) {
       const todayKey = "zigft_setups_" + new Date().toISOString().slice(0, 10);
       let setups = [];
-      try {
-        setups = JSON.parse(localStorage.getItem(todayKey) || "[]");
-      } catch (e) { setups = []; }
+      try { setups = JSON.parse(localStorage.getItem(todayKey) || "[]"); } catch (e) { setups = []; }
 
-      const base = pair.slice(0, 3);
-      const quote = pair.slice(3);
+      const base = pair.slice(0, 3), quote = pair.slice(3);
       const currExp = {};
       currExp[base] = side === "buy" ? 1 : -1;
       currExp[quote] = side === "buy" ? -1 : 1;
@@ -759,16 +736,12 @@ HTML = """
       const conflicts = [];
       setups.forEach(s => {
         if (s.pair === pair && s.side === side) return;
-        const sBase = s.pair.slice(0, 3);
-        const sQuote = s.pair.slice(3);
         const sExp = {};
-        sExp[sBase] = s.side === "buy" ? 1 : -1;
-        sExp[sQuote] = s.side === "buy" ? -1 : 1;
-
+        sExp[s.pair.slice(0, 3)] = s.side === "buy" ? 1 : -1;
+        sExp[s.pair.slice(3)] = s.side === "buy" ? -1 : 1;
         for (const ccy of Object.keys(currExp)) {
           if (sExp[ccy] && sExp[ccy] === currExp[ccy]) {
-            const dirLabel = currExp[ccy] > 0 ? "Long" : "Short";
-            conflicts.push(`${ccy} (${dirLabel}) searah dengan ${s.pair} ${s.side.toUpperCase()}`);
+            conflicts.push(`${ccy} (${currExp[ccy] > 0 ? "Long" : "Short"}) searah dengan ${s.pair} ${s.side.toUpperCase()}`);
           }
         }
       });
@@ -779,24 +752,20 @@ HTML = """
 
       const box = document.getElementById("correlationBox");
       if (conflicts.length > 0 && box) {
-        const uniqueConflicts = [...new Set(conflicts)];
         box.innerHTML = `
-          <div class="q-card" style="border-color: rgba(255, 193, 7, 0.35); margin-bottom: 12px;">
+          <div class="q-card" style="border-color: rgba(255, 193, 7, 0.35);">
             <div class="q-card-head">
               <span style="color: #ffc107;">Correlation Exposure Guard</span>
               <span class="q-pill pill-yellow">STACKED RISK</span>
             </div>
-            <div style="font-size: 0.82rem; color: #ddd;">
-              Eksposur mata uang ganda hari ini: <strong>${uniqueConflicts.join(" • ")}</strong>. Pastikan tidak melebihi batas risiko harian.
+            <div style="font-size: 0.8rem; color: #ddd;">
+              Eksposur mata uang ganda: <strong>${[...new Set(conflicts)].join(" • ")}</strong>.
             </div>
           </div>
         `;
       }
     }
 
-    // =========================================
-    // FETCH LIVE QUANT INTELLIGENCE DARI RENDER
-    // =========================================
     async function runQuantFetch() {
       const container = document.getElementById("quantDynamicBody");
       const apiBase = getQuantApiUrl();
@@ -805,20 +774,13 @@ HTML = """
         container.innerHTML = `
           <div class="q-card">
             <div style="font-size: 0.84rem; color: var(--text-muted); margin-bottom: 10px;">
-              URL Backend Render belum diatur. Klik tombol <strong>Quant API</strong> di pojok kanan atas untuk menempelkan link Render Anda.
+              URL Backend Render belum diatur. Klik <strong>Quant API</strong> di kanan atas untuk menghubungkan.
             </div>
-            <button type="button" class="btn btn-submit w-100" style="padding: 10px; font-size: 0.85rem;" onclick="openApiModal()">Hubungkan URL Render</button>
+            <button type="button" class="btn btn-submit w-100" style="padding:10px; font-size:0.85rem;" onclick="openApiModal()">Hubungkan URL Render</button>
           </div>
         `;
         return;
       }
-
-      container.innerHTML = `
-        <div class="spinner-box">
-          <div class="spinner-ring"></div>
-          <div>Menganalisis Likuiditas, ATR-14, CSM &amp; Probabilitas Historis...</div>
-        </div>
-      `;
 
       try {
         const resp = await fetch(`${apiBase}/api/quant-analysis`, {
@@ -837,39 +799,107 @@ HTML = """
         });
 
         const data = await resp.json();
-        if (!resp.ok || data.error) {
-          throw new Error(data.error || "Gagal memuat analisis");
-        }
+        if (!resp.ok || data.error) throw new Error(data.error || "Gagal memuat analisis");
+        latestQuantData = data;
 
         document.getElementById("quantSourceTag").innerText = `${data.feed_source}${data.spot_calibrated ? " • SPOT CAL" : ""}`;
 
-        let kzPill = "pill-neutral";
-        if (data.killzone.is_weekend) kzPill = "pill-red";
-        else if (data.killzone.quality === "KILLZONE") kzPill = "pill-green";
-        else if (data.killzone.quality === "SPREAD_RISK") kzPill = "pill-red";
-        else if (data.killzone.quality === "TRANSITION") kzPill = "pill-yellow";
+        // Update ZIGFT Rules Badge & Simulasi 1 Lot
+        const zr = data.zigft_rules;
+        const badge = document.getElementById("ruleQuotaBadge");
+        badge.innerText = `Entry: ${zr.daily_used}/${zr.daily_max} Hari Ini • SL: ${zr.monthly_sl_used}/${zr.monthly_sl_max} Bulan Ini`;
+        badge.className = "q-pill " + (zr.can_enter ? "pill-green" : "pill-red");
 
-        let sweepHtml = `<div style="font-size: 0.8rem; color: #4caf50; margin-top: 8px;">✓ Posisi SL aman dari radius sweep likuiditas terdekat.</div>`;
+        if (!zr.can_enter && zr.block_reason) {
+          document.getElementById("cooldownBanner").innerHTML = `<div class="alert-box-warn" style="margin-bottom:10px;">🔒 ${zr.block_reason}</div>`;
+        }
+
+        document.getElementById("lotSimBox").innerHTML = `
+          Simulasi <strong>1.00 Lot</strong> ($${data.usd_per_pip_1lot}/pip):
+          SL <strong style="color:#f44336;">$${data.est_sl_usd_1lot}</strong> |
+          TP <strong style="color:#00e676;">+$${data.est_tp_usd_1lot}</strong>
+        `;
+        updateActionGate();
+
+        // 1. Pre-News Predictive Bot HTML
+        const np = data.news_prediction;
+        let newsHtml = "";
+        if (np.has_event) {
+          let predPill = np.prediction.includes("BULLISH") ? "pill-green" : (np.prediction.includes("BEARISH") ? "pill-red" : "pill-yellow");
+          let slipWarn = np.slippage_warning ? `<div class="alert-box-warn">⚠️ High Slippage Risk: Berita rilis ${np.countdown}!</div>` : "";
+          newsHtml = `
+            <div class="q-card" style="border-color: rgba(0, 230, 118, 0.25);">
+              <div class="q-card-head">
+                <span>1. Pre-News Predictive Bot (${np.currency})</span>
+                <span class="q-pill ${predPill}">${np.prediction}</span>
+              </div>
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);">${np.title}</div>
+              <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;">
+                Jadwal: <strong style="color:#ededed;">${np.release_wib}</strong> (${np.countdown}) • Forecast: <strong>${np.forecast}</strong> | Prev: <strong>${np.previous}</strong>
+              </div>
+              <div style="font-size: 0.8rem; color: #ccc; margin-top: 6px;">${np.reasoning}</div>
+              ${slipWarn}
+            </div>
+          `;
+        } else {
+          newsHtml = `
+            <div class="q-card">
+              <div class="q-card-head">
+                <span>1. Macro News Radar</span>
+                <span class="q-pill pill-neutral">CLEAR</span>
+              </div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">${np.note}</div>
+            </div>
+          `;
+        }
+
+        // 2. SMC Fib 50-75% OTE & Inducement
+        const smc = data.smc;
+        let smcPill = (smc.verdict === "OPTIMAL" || smc.verdict === "VALID") ? "pill-green" : (smc.verdict === "STRETCHED" ? "pill-yellow" : "pill-red");
+        let idmColor = smc.idm_swept ? "#4caf50" : "#ffc107";
+
+        // 3. Killzone & Sweep
+        let kzPill = data.killzone.is_weekend ? "pill-red" : (data.killzone.quality === "KILLZONE" ? "pill-green" : (data.killzone.quality === "SPREAD_RISK" ? "pill-red" : "pill-neutral"));
+        let sweepHtml = `<div style="font-size: 0.79rem; color: #4caf50; margin-top: 8px;">✓ Posisi SL aman dari radius sweep likuiditas terdekat.</div>`;
         if (data.liquidity.sweep_alerts && data.liquidity.sweep_alerts.length > 0) {
           sweepHtml = data.liquidity.sweep_alerts.map(a => `<div class="alert-box-warn">⚠️ Sweep Risk: ${a}</div>`).join("");
         }
 
+        // 4. ATR
         let atrPill = data.volatility.status === "OPTIMAL" ? "pill-green" : (data.volatility.status === "STRETCHED" ? "pill-yellow" : "pill-red");
         let barWidth = Math.min(data.volatility.exhaustion_pct, 100);
         let barColor = data.volatility.exhaustion_pct >= 85 ? "#f44336" : (data.volatility.exhaustion_pct >= 65 ? "#ffc107" : "#00e676");
 
+        // 5. CSM
         let csmPill = data.strength.verdict === "ALIGNED" ? "pill-green" : (data.strength.verdict === "COUNTER" ? "pill-red" : "pill-neutral");
         let chipsHtml = data.strength.ranking.map(r => `<span class="csm-chip">${r.ccy} <strong>${r.score}</strong></span>`).join("");
 
         container.innerHTML = `
-          <!-- 1. Liquidity Pool & Killzone Radar -->
+          ${newsHtml}
+
+          <!-- 2. SMC Fib 50%-75% OTE & Inducement -->
           <div class="q-card">
             <div class="q-card-head">
-              <span>1. Liquidity Pool &amp; Killzone</span>
+              <span>2. SMC Dealing Range (Fib 50%–75%)</span>
+              <span class="q-pill ${smcPill}">${smc.zone}</span>
+            </div>
+            <div class="liq-grid">
+              <div class="liq-box"><div class="liq-lbl">50% EQ</div><div class="liq-val">${smc.eq_50}</div></div>
+              <div class="liq-box"><div class="liq-lbl">61.8% OTE</div><div class="liq-val">${smc.fib_618}</div></div>
+              <div class="liq-box"><div class="liq-lbl">75.0% OTE</div><div class="liq-val">${smc.fib_750}</div></div>
+            </div>
+            <div style="font-size: 0.8rem; color: #ccc; margin-top: 8px;">${smc.note}</div>
+            <div style="font-size: 0.79rem; color: ${idmColor}; margin-top: 4px;">${smc.idm_swept ? "✓" : "•"} ${smc.idm_note}</div>
+          </div>
+
+          <!-- 3. Liquidity Pool & Killzone -->
+          <div class="q-card">
+            <div class="q-card-head">
+              <span>3. Liquidity Pool &amp; Killzone</span>
               <span class="q-pill ${kzPill}">${data.killzone.is_weekend ? "MARKET CLOSED" : data.killzone.zone_name}</span>
             </div>
-            <div style="font-size: 0.8rem; color: var(--text-muted);">
-              Waktu Server Lokal: <strong style="color: var(--text-main);">${data.killzone.day_name}, ${data.killzone.wib_time}</strong>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">
+              Waktu Lokal: <strong style="color: var(--text-main);">${data.killzone.day_name}, ${data.killzone.wib_time}</strong>
             </div>
             <div class="liq-grid">
               <div class="liq-box"><div class="liq-lbl">PDH</div><div class="liq-val">${data.liquidity.pdh}</div></div>
@@ -882,26 +912,26 @@ HTML = """
             ${sweepHtml}
           </div>
 
-          <!-- 2. Dynamic ATR(14) & Range Exhaustion -->
+          <!-- 4. ATR(14) -->
           <div class="q-card">
             <div class="q-card-head">
-              <span>2. ATR(14) &amp; Daily Range Filter</span>
+              <span>4. ATR(14) &amp; Daily Range Filter</span>
               <span class="q-pill ${atrPill}">${data.volatility.status}</span>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.83rem;">
-              <span>Terpakai Hari Ini: <strong>${data.volatility.today_range_pips} pips</strong></span>
+            <div style="display:flex; justify-content:space-between; font-size:0.82rem;">
+              <span>Hari Ini: <strong>${data.volatility.today_range_pips} pips</strong></span>
               <span>ATR-14: <strong>${data.volatility.atr_14_pips} pips</strong> (${data.volatility.exhaustion_pct}%)</span>
             </div>
             <div class="progress-track">
               <div class="progress-fill" style="width: ${barWidth}%; background: ${barColor};"></div>
             </div>
-            <div style="font-size: 0.79rem; color: var(--text-muted);">${data.volatility.note}</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">${data.volatility.note}</div>
           </div>
 
-          <!-- 3. Currency Strength Meter (0 - 10) -->
+          <!-- 5. Currency Strength -->
           <div class="q-card">
             <div class="q-card-head">
-              <span>3. Live Currency Strength (0–10)</span>
+              <span>5. Live Currency Strength (0–10)</span>
               <span class="q-pill ${csmPill}">${data.strength.verdict}</span>
             </div>
             <div class="csm-bar-row">
@@ -909,21 +939,21 @@ HTML = """
               <span style="color:var(--text-muted); font-size:0.75rem;">VS</span>
               <span><strong>${data.strength.quote_ccy}</strong>: ${data.strength.quote_score}/10</span>
             </div>
-            <div style="font-size: 0.8rem; color: #ccc; margin-top: 6px;">${data.strength.note}</div>
+            <div style="font-size: 0.79rem; color: #ccc; margin-top: 6px;">${data.strength.note}</div>
             <div class="csm-rank-strip">${chipsHtml}</div>
           </div>
 
-          <!-- 4. Quantitative Seasonality & Probability -->
+          <!-- 6. Seasonality -->
           <div class="q-card">
             <div class="q-card-head">
-              <span>4. Quantitative Historical Edge</span>
+              <span>6. Quantitative Historical Edge</span>
               <span class="q-pill pill-neutral">2Y DATA</span>
             </div>
-            <div style="font-size: 0.83rem; color: var(--text-main); margin-bottom: 4px;">
-              Hari <strong>${data.seasonality.day_name}</strong> (${data.side}): <strong style="color: var(--neon-green);">${data.seasonality.day_winrate}%</strong> historis searah <span style="color:var(--text-muted); font-size:0.75rem;">(N=${data.seasonality.day_samples}, median ${data.seasonality.day_median_pips} pips)</span>
+            <div style="font-size: 0.82rem; color: var(--text-main); margin-bottom: 4px;">
+              Hari <strong>${data.seasonality.day_name}</strong> (${data.side}): <strong style="color: var(--neon-green);">${data.seasonality.day_winrate}%</strong> searah <span style="color:var(--text-muted); font-size:0.74rem;">(N=${data.seasonality.day_samples}, median ${data.seasonality.day_median_pips} pips)</span>
             </div>
-            <div style="font-size: 0.83rem; color: var(--text-main);">
-              Sesi <strong>${data.seasonality.session_name}</strong> (${data.side}): <strong style="color: var(--neon-green);">${data.seasonality.session_winrate}%</strong> historis searah <span style="color:var(--text-muted); font-size:0.75rem;">(N=${data.seasonality.session_samples}, median ${data.seasonality.session_median_pips} pips)</span>
+            <div style="font-size: 0.82rem; color: var(--text-main);">
+              Sesi <strong>${data.seasonality.session_name}</strong> (${data.side}): <strong style="color: var(--neon-green);">${data.seasonality.session_winrate}%</strong> searah <span style="color:var(--text-muted); font-size:0.74rem;">(N=${data.seasonality.session_samples}, median ${data.seasonality.session_median_pips} pips)</span>
             </div>
           </div>
         `;
@@ -939,9 +969,313 @@ HTML = """
       }
     }
 
+    function onApiConnected() { runQuantFetch(); }
     checkCorrelationGuard("{{ result.pair }}", "{{ result.side }}");
     runQuantFetch();
     {% endif %}
+  </script>
+</body>
+</html>
+"""
+
+
+HTML_PORTFOLIO = """
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <link rel="manifest" href="/manifest.json">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZIGFT Portfolio | Kalender PnL &amp; Equity Curve</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>{{ base_css | safe }}</style>
+</head>
+<body>
+  <div class="container">
+    <div class="top-nav">
+      <div class="nav-tabs-wrap">
+        <a href="/" class="nav-pill">Kalkulator &amp; Quant</a>
+        <a href="/portfolio" class="nav-pill active">Kalender PnL &amp; Curve</a>
+      </div>
+      <button type="button" class="api-config-btn" onclick="openApiModal()">
+        <span id="quantStatusDot" class="status-dot"></span>
+        <span>Quant API</span>
+      </button>
+    </div>
+
+    <div class="dashboard-card">
+      <div class="header" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+        <div>
+          <h3>Portofolio &amp; Kalender PnL</h3>
+          <p>Auto-Settlement 00:00 WIB • Hapus Data Mentah +2 Jam</p>
+        </div>
+        <button type="button" class="btn-outline-custom" style="padding:7px 10px; font-size:0.75rem;" onclick="loadPortfolio(true)">
+          Cek Harga Live
+        </button>
+      </div>
+
+      <div id="portfolioBody">
+        <div class="spinner-box">
+          <div class="spinner-ring"></div>
+          <div>Memuat Kalender PnL, Equity Curve &amp; Status Entry...</div>
+        </div>
+      </div>
+    </div>
+
+    <footer>© 2025 MaelFX × Idris Lab | 1.00 Lot Auto-Price Settlement Engine</footer>
+  </div>
+
+  {{ common_api_modal | safe }}
+
+  <script>
+    let portfolioData = null;
+    let equityChart = null;
+    let viewYear = new Date().getFullYear();
+    let viewMonth = new Date().getMonth(); // 0-11
+
+    const BULAN_ID = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+    function formatSignedUsd(val) {
+      const num = Number(val || 0);
+      if (num > 0) return `+$${num.toFixed(0)}`;
+      if (num < 0) return `-$${Math.abs(num).toFixed(0)}`;
+      return "$0";
+    }
+
+    function changeMonth(delta) {
+      viewMonth += delta;
+      if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+      if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+      renderCalendarGrid();
+    }
+
+    function selectCalDay(dateStr) {
+      const detailBox = document.getElementById("dayDetailBox");
+      if (!portfolioData || !detailBox) return;
+      const d = portfolioData.daily_pnl[dateStr];
+      if (!d) {
+        detailBox.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted);">Tanggal <strong>${dateStr}</strong>: Tidak ada transaksi terselesaikan.</div>`;
+        return;
+      }
+      const listHtml = (d.trades || []).map(t => `
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:4px 0; border-top:1px dashed #222;">
+          <span><strong>${t.pair}</strong> ${t.side} (1:${t.rr}) • ${t.result}</span>
+          <span style="color:${t.pnl_usd >= 0 ? '#00e676' : '#f44336'}; font-weight:600;">
+            ${t.pnl_usd >= 0 ? '+' : '-'}$${Math.abs(t.pnl_usd).toFixed(2)} (${t.pnl_pips} pips)
+          </span>
+        </div>
+      `).join("");
+
+      detailBox.innerHTML = `
+        <div style="font-size:0.82rem; font-weight:600; margin-bottom:6px;">
+          Detail Permanen ${dateStr}: <span style="color:${d.pnl_usd >= 0 ? '#00e676' : '#f44336'};">${d.pnl_usd >= 0 ? '+' : '-'}$${Math.abs(d.pnl_usd).toFixed(2)}</span> (${d.wins}W / ${d.losses}L)
+        </div>
+        ${listHtml}
+      `;
+    }
+
+    function renderCalendarGrid() {
+      const grid = document.getElementById("pnlCalendarGrid");
+      const title = document.getElementById("calMonthTitle");
+      if (!grid || !title || !portfolioData) return;
+
+      title.innerText = `${BULAN_ID[viewMonth]} ${viewYear}`;
+      const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Min..6=Sab
+      const mondayOffset = (firstDay + 6) % 7; // 0=Sen..6=Min
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+      let html = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map(d => `<div class="cal-dow">${d}</div>`).join("");
+
+      for (let i = 0; i < mondayOffset; i++) {
+        html += `<div class="cal-cell empty"></div>`;
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const mStr = String(viewMonth + 1).padStart(2, "0");
+        const dStr = String(day).padStart(2, "0");
+        const key = `${viewYear}-${mStr}-${dStr}`;
+        const rec = portfolioData.daily_pnl[key];
+
+        let cls = "cal-cell";
+        let pnlTxt = "";
+        if (rec) {
+          cls += rec.pnl_usd >= 0 ? " profit" : " loss";
+          pnlTxt = formatSignedUsd(rec.pnl_usd);
+        }
+        html += `
+          <div class="${cls}" onclick="selectCalDay('${key}')">
+            <span class="cal-day-num">${day}</span>
+            <span class="cal-pnl-txt">${pnlTxt}</span>
+          </div>
+        `;
+      }
+      grid.innerHTML = html;
+    }
+
+    function renderEquityChart() {
+      const canvas = document.getElementById("equityCanvas");
+      if (!canvas || !portfolioData) return;
+      const curve = portfolioData.equity_curve || [];
+      const labels = curve.length ? curve.map(c => c.date.slice(5)) : ["Start"];
+      const values = curve.length ? curve.map(c => c.cumulative_pnl) : [0];
+
+      if (equityChart) equityChart.destroy();
+      equityChart = new Chart(canvas.getContext("2d"), {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "Cumulative PnL ($)",
+            data: values,
+            borderColor: "#00e676",
+            backgroundColor: "rgba(0, 230, 118, 0.12)",
+            borderWidth: 2,
+            fill: true,
+            tension: 0.25,
+            pointRadius: 3,
+            pointBackgroundColor: "#00e676"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: "#888", font: { size: 10 } }, grid: { color: "#1a1a1a" } },
+            y: { ticks: { color: "#888", font: { size: 10 }, callback: v => "$" + v }, grid: { color: "#1a1a1a" } }
+          }
+        }
+      });
+    }
+
+    async function loadPortfolio(forceCheck = false) {
+      const container = document.getElementById("portfolioBody");
+      const apiBase = getQuantApiUrl();
+
+      if (!apiBase) {
+        container.innerHTML = `
+          <div class="q-card">
+            <div style="font-size:0.84rem; color:var(--text-muted); margin-bottom:10px;">
+              Hubungkan URL Backend Render terlebih dahulu melalui tombol <strong>Quant API</strong> di pojok kanan atas.
+            </div>
+            <button type="button" class="btn btn-submit w-100" onclick="openApiModal()">Hubungkan URL Render</button>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        const resp = await fetch(`${apiBase}/api/portfolio?force=${forceCheck ? "1" : "0"}`);
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || "Gagal memuat portofolio");
+        portfolioData = data;
+
+        const s = data.summary;
+        const zr = data.zigft_rules;
+        const netColor = s.net_pnl_usd >= 0 ? "#00e676" : "#f44336";
+
+        let rawHtml = `<div style="font-size:0.8rem; color:var(--text-muted);">Tidak ada data mentah aktif (semua riwayat lama sudah diolah ke kalender &amp; dibersihkan otomatis).</div>`;
+        if (data.raw_entries && data.raw_entries.length > 0) {
+          rawHtml = data.raw_entries.map(e => {
+            let pillCls = "pill-neutral";
+            let statusTxt = "OPEN (PANTAU LIVE)";
+            if (e.status === "TP_HIT") { pillCls = "pill-green"; statusTxt = `TP HIT (+$${e.pnl_usd})`; }
+            if (e.status === "SL_HIT") { pillCls = "pill-red"; statusTxt = `SL HIT (-$${Math.abs(e.pnl_usd)})`; }
+
+            let lifecycleNote = "Menunggu sentuhan harga TP/SL.";
+            if (e.settled) {
+              lifecycleNote = `✓ Sudah masuk Kalender PnL. Data mentah dihapus otomatis pukul <strong>${e.delete_after_wib}</strong> (+2 jam buffer).`;
+            } else if (e.status !== "OPEN") {
+              lifecycleNote = "Menunggu jam <strong>00:00 WIB</strong> untuk dipindahkan ke Kalender PnL permanen.";
+            }
+
+            return `
+              <div style="padding:10px; border:1px solid #1e1e1e; border-radius:8px; margin-bottom:8px; background:#070707;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <strong style="font-size:0.88rem;">${e.pair} ${e.side.toUpperCase()} (1:${e.rr})</strong>
+                  <span class="q-pill ${pillCls}">${statusTxt}</span>
+                </div>
+                <div style="font-size:0.76rem; color:var(--text-muted); margin-top:4px;">
+                  Entry: ${e.entry} | SL: ${e.sl} | TP: ${e.tp} • Dicatat: ${e.created_wib}
+                </div>
+                <div style="font-size:0.75rem; color:#bbb; margin-top:4px;">${lifecycleNote}</div>
+              </div>
+            `;
+          }).join("");
+        }
+
+        container.innerHTML = `
+          <div class="result-grid" style="margin-bottom:14px;">
+            <div class="data-item">
+              <div class="data-label">Net PnL Permanen (1 Lot)</div>
+              <div class="data-value" style="color:${netColor};">${s.net_pnl_usd >= 0 ? '+' : '-'}$${Math.abs(s.net_pnl_usd).toFixed(2)}</div>
+            </div>
+            <div class="data-item">
+              <div class="data-label">Win Rate / Settled</div>
+              <div class="data-value">${s.win_rate}% <span style="font-size:0.8rem; color:#888;">(${s.wins}W/${s.losses}L)</span></div>
+            </div>
+            <div class="data-item">
+              <div class="data-label">Kuota SL Bulanan</div>
+              <div class="data-value">${zr.monthly_sl_used} / ${zr.monthly_sl_max} SL</div>
+            </div>
+            <div class="data-item">
+              <div class="data-label">Settlement Berikutnya</div>
+              <div class="data-value" style="font-size:0.85rem;">${data.next_settlement_wib}</div>
+            </div>
+          </div>
+
+          ${zr.cooldown_active ? `<div class="alert-box-warn" style="margin-bottom:14px;">🔒 ${zr.block_reason}</div>` : ""}
+
+          <!-- EQUITY CURVE -->
+          <div class="q-card">
+            <div class="q-card-head">
+              <span>Equity Curve (Kumulatif Permanen)</span>
+              <span class="q-pill pill-green">1.00 LOT BASIS</span>
+            </div>
+            <div style="height: 170px; width: 100%;">
+              <canvas id="equityCanvas"></canvas>
+            </div>
+          </div>
+
+          <!-- KALENDER PNL HARIAN -->
+          <div class="q-card">
+            <div class="cal-header-bar">
+              <button type="button" class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+              <strong id="calMonthTitle" style="font-size:0.92rem;"></strong>
+              <button type="button" class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+            </div>
+            <div class="cal-grid" id="pnlCalendarGrid"></div>
+            <div id="dayDetailBox" style="margin-top:12px; padding-top:10px; border-top:1px solid #1e1e1e; font-size:0.78rem; color:var(--text-muted);">
+              Ketuk kotak tanggal untuk melihat rincian profit/loss harian.
+            </div>
+          </div>
+
+          <!-- RIWAYAT ENTRY MENTAH (PRE-SETTLEMENT & BUFFER 2 JAM) -->
+          <div class="q-card">
+            <div class="q-card-head">
+              <span>Riwayat Entry Mentah (Sementara)</span>
+              <span class="q-pill pill-neutral">AUTO-PURGE +2J</span>
+            </div>
+            ${rawHtml}
+          </div>
+        `;
+
+        renderEquityChart();
+        renderCalendarGrid();
+      } catch (err) {
+        container.innerHTML = `
+          <div class="q-card">
+            <div style="font-size:0.82rem; color:#ff6b6b; margin-bottom:10px;">Gagal memuat portofolio: ${err.message}</div>
+            <button type="button" class="btn btn-submit w-100" onclick="loadPortfolio(false)">Coba Lagi</button>
+          </div>
+        `;
+      }
+    }
+
+    function onApiConnected() { loadPortfolio(false); }
+    loadPortfolio(false);
   </script>
 </body>
 </html>
@@ -1027,11 +1361,24 @@ def index():
             result = calculate_sl_tp(pair, side, entry, rr)
 
     return render_template_string(
-        HTML,
+        HTML_CALCULATOR,
         result=result,
         tf_rules=TF_RULES,
-        default_quant_api=DEFAULT_QUANT_API
+        base_css=BASE_CSS,
+        common_api_modal=COMMON_API_MODAL,
+        default_quant_api=DEFAULT_QUANT_API,
+    )
+
+
+@app.route("/portfolio", methods=["GET"])
+def portfolio():
+    return render_template_string(
+        HTML_PORTFOLIO,
+        base_css=BASE_CSS,
+        common_api_modal=COMMON_API_MODAL,
+        default_quant_api=DEFAULT_QUANT_API,
     )
 
 
 app = app
+
