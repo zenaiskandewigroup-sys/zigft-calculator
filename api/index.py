@@ -240,9 +240,22 @@ BASE_CSS = """
     color: #666;
     border-color: #1c1c1c;
     background: #090909;
-    cursor: wait;
+    cursor: not-allowed;
     transform: none;
   }
+  .audit-btn {
+    background: #121212;
+    border: 1px solid #2a2a2a;
+    color: #ccc;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .audit-btn:hover { border-color: var(--neon-green); color: var(--neon-green); }
+  .audit-btn.danger:hover { border-color: #f44336; color: #ff6b6b; }
+
   .btn-mini-spin {
     display: inline-block;
     width: 12px;
@@ -636,7 +649,7 @@ HTML_CALCULATOR = """
     <div class="quant-section" id="quantPanel">
       <div class="quant-title">
         <span>Quant Market Intelligence</span>
-        <span class="quant-tag" id="quantSourceTag">LIVE FEED</span>
+        <span class="quant-tag" id="quantSourceTag">CONNECTING</span>
       </div>
       <div id="correlationBox"></div>
       <div id="quantDynamicBody">
@@ -685,6 +698,10 @@ HTML_CALCULATOR = """
   <script>
     let targetNewsReleaseMs = null;
     let countdownTimerId = null;
+
+    function fmtVal(v, suffix = "") {
+      return (v !== null && v !== undefined) ? `${v}${suffix}` : "N/A";
+    }
 
     function startNewsCountdown(releaseTsMs) {
       targetNewsReleaseMs = releaseTsMs;
@@ -809,7 +826,8 @@ HTML_CALCULATOR = """
 
       document.getElementById("btnCopySignal").disabled = !structureValid;
 
-      const canEnter = latestQuantData && latestQuantData.zigft_rules ? latestQuantData.zigft_rules.can_enter : true;
+      const quotaVerified = Boolean(latestQuantData && latestQuantData.zigft_rules);
+      const canEnter = quotaVerified && Boolean(latestQuantData.zigft_rules.can_enter);
       document.getElementById("btnLogEntry").disabled = !(structureValid && canEnter);
     }
 
@@ -957,13 +975,20 @@ HTML_CALCULATOR = """
 
         if (!zr.can_enter && zr.block_reason) {
           document.getElementById("cooldownBanner").innerHTML = `<div class="alert-box-warn" style="margin-bottom:10px;">🔒 ${zr.block_reason}</div>`;
+        } else {
+          document.getElementById("cooldownBanner").innerHTML = "";
         }
 
-        document.getElementById("lotSimBox").innerHTML = `
-          Simulasi <strong>1.00 Lot</strong> ($${data.usd_per_pip_1lot}/pip):
-          SL <strong style="color:#f44336;">$${data.est_sl_usd_1lot}</strong> |
-          TP <strong style="color:#00e676;">+$${data.est_tp_usd_1lot}</strong>
-        `;
+        const lotBox = document.getElementById("lotSimBox");
+        if (data.usd_per_pip_1lot !== null && data.usd_per_pip_1lot !== undefined) {
+          lotBox.innerHTML = `
+            Simulasi <strong>1.00 Lot</strong> ($${data.usd_per_pip_1lot}/pip live):
+            SL <strong style="color:#f44336;">-$${data.est_sl_usd_1lot}</strong> |
+            TP <strong style="color:#00e676;">+$${data.est_tp_usd_1lot}</strong>
+          `;
+        } else {
+          lotBox.innerHTML = `<span style="color:#ffc107;">Kurs live konversi pip sedang tidak tersedia.</span>`;
+        }
         updateActionGate();
 
         const np = data.news_prediction;
@@ -1011,12 +1036,22 @@ HTML_CALCULATOR = """
           sweepHtml = data.liquidity.sweep_alerts.map(a => `<div class="alert-box-warn">⚠️ Sweep Risk: ${a}</div>`).join("");
         }
 
+        const volAvail = data.volatility.status !== "UNAVAILABLE" && data.volatility.atr_14_pips !== null;
         let atrPill = data.volatility.status === "OPTIMAL" ? "pill-green" : (data.volatility.status === "STRETCHED" ? "pill-yellow" : "pill-red");
-        let barWidth = Math.min(data.volatility.exhaustion_pct, 100);
-        let barColor = data.volatility.exhaustion_pct >= 85 ? "#f44336" : (data.volatility.exhaustion_pct >= 65 ? "#ffc107" : "#00e676");
+        let barWidth = volAvail ? Math.min(data.volatility.exhaustion_pct, 100) : 0;
+        let barColor = volAvail && data.volatility.exhaustion_pct >= 85 ? "#f44336" : (volAvail && data.volatility.exhaustion_pct >= 65 ? "#ffc107" : "#00e676");
 
+        const strAvail = data.strength.available !== false && data.strength.base_score !== null;
         let csmPill = data.strength.verdict === "ALIGNED" ? "pill-green" : (data.strength.verdict === "COUNTER" ? "pill-red" : "pill-neutral");
-        let chipsHtml = data.strength.ranking.map(r => `<span class="csm-chip">${r.ccy} <strong>${r.score}</strong></span>`).join("");
+        let chipsHtml = (data.strength.ranking || []).map(r => `<span class="csm-chip">${r.ccy} <strong>${r.score}</strong></span>`).join("");
+
+        const seas = data.seasonality;
+        const dayStatTxt = seas.day_samples > 0
+          ? `<strong style="color: var(--neon-green);">${seas.day_winrate}%</strong> searah <span style="color:var(--text-muted); font-size:0.74rem;">(N=${seas.day_samples}, median ${seas.day_median_pips} pips)</span>`
+          : `<span style="color:var(--text-muted);">Data historis hari tidak tersedia</span>`;
+        const sessStatTxt = seas.session_samples > 0
+          ? `<strong style="color: var(--neon-green);">${seas.session_winrate}%</strong> searah <span style="color:var(--text-muted); font-size:0.74rem;">(N=${seas.session_samples}, median ${seas.session_median_pips} pips)</span>`
+          : `<span style="color:var(--text-muted);">Data historis sesi tidak tersedia</span>`;
 
         container.innerHTML = `
           ${newsHtml}
@@ -1027,9 +1062,9 @@ HTML_CALCULATOR = """
               <span class="q-pill ${smcPill}">${smc.zone}</span>
             </div>
             <div class="liq-grid">
-              <div class="liq-box"><div class="liq-lbl">50% EQ</div><div class="liq-val">${smc.eq_50}</div></div>
-              <div class="liq-box"><div class="liq-lbl">61.8% OTE</div><div class="liq-val">${smc.fib_618}</div></div>
-              <div class="liq-box"><div class="liq-lbl">75.0% OTE</div><div class="liq-val">${smc.fib_750}</div></div>
+              <div class="liq-box"><div class="liq-lbl">50% EQ</div><div class="liq-val">${fmtVal(smc.eq_50)}</div></div>
+              <div class="liq-box"><div class="liq-lbl">61.8% OTE</div><div class="liq-val">${fmtVal(smc.fib_618)}</div></div>
+              <div class="liq-box"><div class="liq-lbl">75.0% OTE</div><div class="liq-val">${fmtVal(smc.fib_750)}</div></div>
             </div>
             <div style="font-size: 0.8rem; color: #ccc; margin-top: 8px;">${smc.note}</div>
             <div style="font-size: 0.79rem; color: ${idmColor}; margin-top: 4px;">${smc.idm_swept ? "✓" : "•"} ${smc.idm_note}</div>
@@ -1044,12 +1079,12 @@ HTML_CALCULATOR = """
               Waktu Lokal: <strong style="color: var(--text-main);">${data.killzone.day_name}, ${data.killzone.wib_time}</strong>
             </div>
             <div class="liq-grid">
-              <div class="liq-box"><div class="liq-lbl">PDH</div><div class="liq-val">${data.liquidity.pdh}</div></div>
-              <div class="liq-box"><div class="liq-lbl">PWH</div><div class="liq-val">${data.liquidity.pwh}</div></div>
-              <div class="liq-box"><div class="liq-lbl">Asian High</div><div class="liq-val">${data.liquidity.asian_high}</div></div>
-              <div class="liq-box"><div class="liq-lbl">PDL</div><div class="liq-val">${data.liquidity.pdl}</div></div>
-              <div class="liq-box"><div class="liq-lbl">PWL</div><div class="liq-val">${data.liquidity.pwl}</div></div>
-              <div class="liq-box"><div class="liq-lbl">Asian Low</div><div class="liq-val">${data.liquidity.asian_low}</div></div>
+              <div class="liq-box"><div class="liq-lbl">PDH</div><div class="liq-val">${fmtVal(data.liquidity.pdh)}</div></div>
+              <div class="liq-box"><div class="liq-lbl">PWH</div><div class="liq-val">${fmtVal(data.liquidity.pwh)}</div></div>
+              <div class="liq-box"><div class="liq-lbl">Asian High</div><div class="liq-val">${fmtVal(data.liquidity.asian_high)}</div></div>
+              <div class="liq-box"><div class="liq-lbl">PDL</div><div class="liq-val">${fmtVal(data.liquidity.pdl)}</div></div>
+              <div class="liq-box"><div class="liq-lbl">PWL</div><div class="liq-val">${fmtVal(data.liquidity.pwl)}</div></div>
+              <div class="liq-box"><div class="liq-lbl">Asian Low</div><div class="liq-val">${fmtVal(data.liquidity.asian_low)}</div></div>
             </div>
             ${sweepHtml}
           </div>
@@ -1059,40 +1094,44 @@ HTML_CALCULATOR = """
               <span>4. ATR(14) &amp; Daily Range Filter</span>
               <span class="q-pill ${atrPill}">${data.volatility.status}</span>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.82rem;">
-              <span>Hari Ini: <strong>${data.volatility.today_range_pips} pips</strong></span>
-              <span>ATR-14: <strong>${data.volatility.atr_14_pips} pips</strong> (${data.volatility.exhaustion_pct}%)</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" style="width: ${barWidth}%; background: ${barColor};"></div>
-            </div>
+            ${volAvail ? `
+              <div style="display:flex; justify-content:space-between; font-size:0.82rem;">
+                <span>Hari Ini: <strong>${data.volatility.today_range_pips} pips</strong></span>
+                <span>ATR-14: <strong>${data.volatility.atr_14_pips} pips</strong> (${data.volatility.exhaustion_pct}%)</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" style="width: ${barWidth}%; background: ${barColor};"></div>
+              </div>
+            ` : ""}
             <div style="font-size: 0.78rem; color: var(--text-muted);">${data.volatility.note}</div>
           </div>
 
           <div class="q-card">
             <div class="q-card-head">
-              <span>5. Live Currency Strength (0–10)</span>
+              <span>5. Live Currency Strength (1–9)</span>
               <span class="q-pill ${csmPill}">${data.strength.verdict}</span>
             </div>
-            <div class="csm-bar-row">
-              <span><strong>${data.strength.base_ccy}</strong>: ${data.strength.base_score}/10</span>
-              <span style="color:var(--text-muted); font-size:0.75rem;">VS</span>
-              <span><strong>${data.strength.quote_ccy}</strong>: ${data.strength.quote_score}/10</span>
-            </div>
+            ${strAvail ? `
+              <div class="csm-bar-row">
+                <span><strong>${data.strength.base_ccy}</strong>: ${data.strength.base_score}/9</span>
+                <span style="color:var(--text-muted); font-size:0.75rem;">VS</span>
+                <span><strong>${data.strength.quote_ccy}</strong>: ${data.strength.quote_score}/9</span>
+              </div>
+            ` : ""}
             <div style="font-size: 0.79rem; color: #ccc; margin-top: 6px;">${data.strength.note}</div>
-            <div class="csm-rank-strip">${chipsHtml}</div>
+            ${chipsHtml ? `<div class="csm-rank-strip">${chipsHtml}</div>` : ""}
           </div>
 
           <div class="q-card">
             <div class="q-card-head">
               <span>6. Quantitative Historical Edge</span>
-              <span class="q-pill pill-neutral">2Y DATA</span>
+              <span class="q-pill pill-neutral">1Y D1 • 1M H1</span>
             </div>
             <div style="font-size: 0.82rem; color: var(--text-main); margin-bottom: 4px;">
-              Hari <strong>${data.seasonality.day_name}</strong> (${data.side}): <strong style="color: var(--neon-green);">${data.seasonality.day_winrate}%</strong> searah <span style="color:var(--text-muted); font-size:0.74rem;">(N=${data.seasonality.day_samples}, median ${data.seasonality.day_median_pips} pips)</span>
+              Hari <strong>${seas.day_name}</strong> (${data.side}): ${dayStatTxt}
             </div>
             <div style="font-size: 0.82rem; color: var(--text-main);">
-              Sesi <strong>${data.seasonality.session_name}</strong> (${data.side}): <strong style="color: var(--neon-green);">${data.seasonality.session_winrate}%</strong> searah <span style="color:var(--text-muted); font-size:0.74rem;">(N=${data.seasonality.session_samples}, median ${data.seasonality.session_median_pips} pips)</span>
+              Sesi <strong>${seas.session_name}</strong> (${data.side}): ${sessStatTxt}
             </div>
           </div>
         `;
@@ -1254,7 +1293,7 @@ HTML_PORTFOLIO = """
           </div>
           <div id="bfTimeWrap" style="display:none;">
             <label class="form-label">Jam Entry (WIB)</label>
-            <input type="time" id="bfTime" class="form-control" value="08:00">
+            <input type="time" id="bfTime" class="form-control">
           </div>
         </div>
 
@@ -1276,11 +1315,150 @@ HTML_PORTFOLIO = """
     </div>
   </div>
 
+  <!-- MODAL AUDIT ENTRY AKTIF / BUFFER -->
+  <div id="auditRawModal" class="modal-overlay">
+    <div class="modal-container" style="height: auto; max-height: 92vh; overflow-y: auto; padding: 22px;">
+      <div class="modal-header" style="padding: 0 0 14px 0;">
+        <button class="close-modal-btn" onclick="closeAuditRawModal()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <h4>Audit Setup Entry Aktif</h4>
+        <div style="width: 22px;"></div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <input type="hidden" id="arId">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="mb-2">
+          <div>
+            <label class="form-label">Pair</label>
+            <select id="arPair" class="form-select">
+              <option value="XAUUSD">XAUUSD</option>
+              <option value="EURUSD">EURUSD</option>
+              <option value="GBPUSD">GBPUSD</option>
+              <option value="AUDUSD">AUDUSD</option>
+              <option value="NZDUSD">NZDUSD</option>
+              <option value="USDJPY">USDJPY</option>
+              <option value="USDCAD">USDCAD</option>
+              <option value="USDCHF">USDCHF</option>
+              <option value="EURGBP">EURGBP</option>
+              <option value="EURJPY">EURJPY</option>
+              <option value="GBPJPY">GBPJPY</option>
+              <option value="AUDJPY">AUDJPY</option>
+              <option value="NZDJPY">NZDJPY</option>
+              <option value="CADJPY">CADJPY</option>
+              <option value="CHFJPY">CHFJPY</option>
+              <option value="EURNZD">EURNZD</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Side</label>
+            <select id="arSide" class="form-select">
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Entry Price</label>
+          <input type="number" step="any" id="arEntry" class="form-control">
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="mb-3">
+          <div>
+            <label class="form-label">Stop Loss (SL)</label>
+            <input type="number" step="any" id="arSl" class="form-control">
+          </div>
+          <div>
+            <label class="form-label">Take Profit (TP)</label>
+            <input type="number" step="any" id="arTp" class="form-control">
+          </div>
+        </div>
+
+        <div id="arFeedback" style="font-size:0.79rem; margin-bottom:10px;"></div>
+
+        <button type="button" id="btnSaveAuditRaw" class="btn btn-neon w-100" onclick="submitAuditRaw()">
+          Simpan Audit &amp; Cek Ulang Live
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL AUDIT TRADE KALENDER PERMANEN -->
+  <div id="auditSettledModal" class="modal-overlay">
+    <div class="modal-container" style="height: auto; max-height: 92vh; overflow-y: auto; padding: 22px;">
+      <div class="modal-header" style="padding: 0 0 14px 0;">
+        <button class="close-modal-btn" onclick="closeAuditSettledModal()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <h4>Audit Catatan Kalender PnL</h4>
+        <div style="width: 22px;"></div>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <input type="hidden" id="asDate">
+        <input type="hidden" id="asIndex">
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="mb-2">
+          <div>
+            <label class="form-label">Pair</label>
+            <select id="asPair" class="form-select">
+              <option value="XAUUSD">XAUUSD</option>
+              <option value="EURUSD">EURUSD</option>
+              <option value="GBPUSD">GBPUSD</option>
+              <option value="AUDUSD">AUDUSD</option>
+              <option value="NZDUSD">NZDUSD</option>
+              <option value="USDJPY">USDJPY</option>
+              <option value="USDCAD">USDCAD</option>
+              <option value="USDCHF">USDCHF</option>
+              <option value="EURGBP">EURGBP</option>
+              <option value="EURJPY">EURJPY</option>
+              <option value="GBPJPY">GBPJPY</option>
+              <option value="AUDJPY">AUDJPY</option>
+              <option value="NZDJPY">NZDJPY</option>
+              <option value="CADJPY">CADJPY</option>
+              <option value="CHFJPY">CHFJPY</option>
+              <option value="EURNZD">EURNZD</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Side</label>
+            <select id="asSide" class="form-select">
+              <option value="BUY">BUY</option>
+              <option value="SELL">SELL</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;" class="mb-3">
+          <div>
+            <label class="form-label">Hasil Trade</label>
+            <select id="asResult" class="form-select">
+              <option value="TP_HIT">TP_HIT (Win)</option>
+              <option value="SL_HIT">SL_HIT (Loss)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">PnL USD (1 Lot)</label>
+            <input type="number" step="any" id="asPnlUsd" class="form-control">
+          </div>
+        </div>
+
+        <div id="asFeedback" style="font-size:0.79rem; margin-bottom:10px;"></div>
+
+        <button type="button" id="btnSaveAuditSettled" class="btn btn-neon w-100" onclick="submitAuditSettled()">
+          Simpan Koreksi Kalender
+        </button>
+      </div>
+    </div>
+  </div>
+
   {{ common_api_modal | safe }}
 
   <script>
     let portfolioData = null;
     let equityChart = null;
+    let selectedCalDate = null;
     let viewYear = new Date().getFullYear();
     let viewMonth = new Date().getMonth();
 
@@ -1347,6 +1525,177 @@ HTML_PORTFOLIO = """
       }
     }
 
+    // ==========================================
+    // AUDIT RAW ENTRY (ACTIVE / +2H BUFFER)
+    // ==========================================
+    function openAuditRawModal(entryId) {
+      if (!portfolioData) return;
+      const item = (portfolioData.raw_entries || []).find(x => x.id === entryId);
+      if (!item) return;
+
+      document.getElementById("arId").value = item.id;
+      document.getElementById("arPair").value = item.pair;
+      document.getElementById("arSide").value = item.side.toLowerCase();
+      document.getElementById("arEntry").value = item.entry;
+      document.getElementById("arSl").value = item.sl;
+      document.getElementById("arTp").value = item.tp;
+      document.getElementById("arFeedback").innerText = "";
+      document.getElementById("auditRawModal").style.display = "flex";
+    }
+    function closeAuditRawModal() {
+      document.getElementById("auditRawModal").style.display = "none";
+    }
+
+    async function submitAuditRaw() {
+      const apiBase = getQuantApiUrl();
+      const fb = document.getElementById("arFeedback");
+      const btn = document.getElementById("btnSaveAuditRaw");
+      const entryId = document.getElementById("arId").value;
+      if (!apiBase || !entryId) return;
+
+      btn.disabled = true;
+      btn.innerText = "Mengecek Candle Live...";
+      fb.style.color = "#ffc107";
+      fb.innerText = "Menyimpan audit & mencocokkan ulang candle M15...";
+
+      try {
+        const resp = await fetch(`${apiBase}/api/entries/${encodeURIComponent(entryId)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pair: document.getElementById("arPair").value,
+            side: document.getElementById("arSide").value,
+            entry: parseFloat(document.getElementById("arEntry").value || "0"),
+            sl: parseFloat(document.getElementById("arSl").value || "0"),
+            tp: parseFloat(document.getElementById("arTp").value || "0")
+          })
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || "Gagal audit entry");
+
+        fb.style.color = "#00e676";
+        fb.innerText = "✓ " + data.message;
+        setTimeout(() => {
+          closeAuditRawModal();
+          loadPortfolio(false);
+        }, 700);
+      } catch (err) {
+        fb.style.color = "#ff6b6b";
+        fb.innerText = "✕ " + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Simpan Audit & Cek Ulang Live";
+      }
+    }
+
+    async function deleteRawEntry(entryId) {
+      const apiBase = getQuantApiUrl();
+      if (!apiBase || !entryId) return;
+      if (!confirm("Hapus entry ini dari daftar aktif?")) return;
+
+      try {
+        const resp = await fetch(`${apiBase}/api/entries/${encodeURIComponent(entryId)}`, {
+          method: "DELETE"
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || "Gagal menghapus entry");
+        loadPortfolio(false);
+      } catch (err) {
+        alert("Gagal menghapus: " + err.message);
+      }
+    }
+
+    // ==========================================
+    // AUDIT SETTLED CALENDAR TRADE
+    // ==========================================
+    function openAuditSettledModal(dateStr, idx) {
+      if (!portfolioData) return;
+      const dayRec = portfolioData.daily_pnl[dateStr];
+      if (!dayRec || !dayRec.trades || !dayRec.trades[idx]) return;
+      const tr = dayRec.trades[idx];
+
+      document.getElementById("asDate").value = dateStr;
+      document.getElementById("asIndex").value = idx;
+      document.getElementById("asPair").value = tr.pair;
+      document.getElementById("asSide").value = tr.side.toUpperCase();
+      document.getElementById("asResult").value = tr.result;
+      document.getElementById("asPnlUsd").value = Math.abs(Number(tr.pnl_usd || 0));
+      document.getElementById("asFeedback").innerText = "";
+      document.getElementById("auditSettledModal").style.display = "flex";
+    }
+    function closeAuditSettledModal() {
+      document.getElementById("auditSettledModal").style.display = "none";
+    }
+
+    async function submitAuditSettled() {
+      const apiBase = getQuantApiUrl();
+      const fb = document.getElementById("asFeedback");
+      const btn = document.getElementById("btnSaveAuditSettled");
+      const dateStr = document.getElementById("asDate").value;
+      const idx = parseInt(document.getElementById("asIndex").value, 10);
+      if (!apiBase) return;
+
+      const resType = document.getElementById("asResult").value;
+      const rawMag = Math.abs(parseFloat(document.getElementById("asPnlUsd").value || "0"));
+      const signedPnl = resType === "TP_HIT" ? rawMag : -rawMag;
+
+      btn.disabled = true;
+      btn.innerText = "Menyimpan Koreksi...";
+      fb.style.color = "#ffc107";
+      fb.innerText = "Menghitung ulang PnL & kuota SL bulanan...";
+
+      try {
+        const resp = await fetch(`${apiBase}/api/portfolio/settled`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            date: dateStr,
+            index: idx,
+            pair: document.getElementById("asPair").value,
+            side: document.getElementById("asSide").value,
+            result: resType,
+            pnl_usd: signedPnl
+          })
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || "Gagal menyimpan koreksi");
+
+        fb.style.color = "#00e676";
+        fb.innerText = "✓ " + data.message;
+        selectedCalDate = dateStr;
+        setTimeout(() => {
+          closeAuditSettledModal();
+          loadPortfolio(false);
+        }, 700);
+      } catch (err) {
+        fb.style.color = "#ff6b6b";
+        fb.innerText = "✕ " + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Simpan Koreksi Kalender";
+      }
+    }
+
+    async function deleteSettledTrade(dateStr, idx) {
+      const apiBase = getQuantApiUrl();
+      if (!apiBase) return;
+      if (!confirm(`Hapus catatan trade tanggal ${dateStr} ini dari Kalender PnL permanen?`)) return;
+
+      try {
+        const resp = await fetch(`${apiBase}/api/portfolio/settled`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ date: dateStr, index: idx })
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || "Gagal menghapus trade");
+        selectedCalDate = dateStr;
+        loadPortfolio(false);
+      } catch (err) {
+        alert("Gagal menghapus: " + err.message);
+      }
+    }
+
     function formatSignedUsd(val) {
       const num = Number(val || 0);
       if (num > 0) return `+$${num.toFixed(0)}`;
@@ -1362,6 +1711,7 @@ HTML_PORTFOLIO = """
     }
 
     function selectCalDay(dateStr) {
+      selectedCalDate = dateStr;
       const detailBox = document.getElementById("dayDetailBox");
       if (!portfolioData || !detailBox) return;
       const d = portfolioData.daily_pnl[dateStr];
@@ -1369,12 +1719,18 @@ HTML_PORTFOLIO = """
         detailBox.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted);">Tanggal <strong>${dateStr}</strong>: Tidak ada transaksi terselesaikan.</div>`;
         return;
       }
-      const listHtml = (d.trades || []).map(t => `
-        <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:4px 0; border-top:1px dashed #222;">
-          <span><strong>${t.pair}</strong> ${t.side} (1:${t.rr}) • ${t.result}</span>
-          <span style="color:${t.pnl_usd >= 0 ? '#00e676' : '#f44336'}; font-weight:600;">
-            ${t.pnl_usd >= 0 ? '+' : '-'}$${Math.abs(t.pnl_usd).toFixed(2)} (${t.pnl_pips} pips)
-          </span>
+      const listHtml = (d.trades || []).map((t, idx) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:0.8rem; padding:6px 0; border-top:1px dashed #222;">
+          <div>
+            <div><strong>${t.pair}</strong> ${t.side} (1:${t.rr}) • ${t.result}</div>
+            <div style="color:${t.pnl_usd >= 0 ? '#00e676' : '#f44336'}; font-weight:600; font-size:0.78rem;">
+              ${t.pnl_usd >= 0 ? '+' : '-'}$${Math.abs(t.pnl_usd).toFixed(2)} (${t.pnl_pips} pips)
+            </div>
+          </div>
+          <div style="display:flex; gap:5px;">
+            <button type="button" class="audit-btn" onclick="openAuditSettledModal('${dateStr}', ${idx})">Edit</button>
+            <button type="button" class="audit-btn danger" onclick="deleteSettledTrade('${dateStr}', ${idx})">Hapus</button>
+          </div>
         </div>
       `).join("");
 
@@ -1422,16 +1778,31 @@ HTML_PORTFOLIO = """
         `;
       }
       grid.innerHTML = html;
+      if (selectedCalDate) {
+        selectCalDay(selectedCalDate);
+      }
     }
 
     function renderEquityChart() {
-      const canvas = document.getElementById("equityCanvas");
-      if (!canvas || !portfolioData) return;
+      const wrap = document.getElementById("equityChartWrap");
+      if (!wrap || !portfolioData) return;
       const curve = portfolioData.equity_curve || [];
-      const labels = curve.length ? curve.map(c => c.date.slice(5)) : ["Start"];
-      const values = curve.length ? curve.map(c => c.cumulative_pnl) : [0];
 
-      if (equityChart) equityChart.destroy();
+      if (equityChart) {
+        equityChart.destroy();
+        equityChart = null;
+      }
+
+      if (!curve.length) {
+        wrap.innerHTML = `<div style="height:100%; display:flex; align-items:center; justify-content:center; font-size:0.8rem; color:var(--text-muted); text-align:center;">Belum ada transaksi settled di kalender permanen.</div>`;
+        return;
+      }
+
+      wrap.innerHTML = `<canvas id="equityCanvas"></canvas>`;
+      const canvas = document.getElementById("equityCanvas");
+      const labels = curve.map(c => c.date.slice(5));
+      const values = curve.map(c => c.cumulative_pnl);
+
       equityChart = new Chart(canvas.getContext("2d"), {
         type: "line",
         data: {
@@ -1520,7 +1891,7 @@ HTML_PORTFOLIO = """
 
             return `
               <div style="padding:10px; border:1px solid #1e1e1e; border-radius:8px; margin-bottom:8px; background:#070707;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
                   <strong style="font-size:0.88rem;">${e.pair} ${e.side.toUpperCase()} (1:${e.rr})</strong>
                   <span class="q-pill ${pillCls}">${statusTxt}</span>
                 </div>
@@ -1528,6 +1899,10 @@ HTML_PORTFOLIO = """
                   Entry: ${e.entry} | SL: ${e.sl} | TP: ${e.tp} • Dicatat: ${e.created_wib}
                 </div>
                 <div style="font-size:0.75rem; color:#bbb; margin-top:4px;">${lifecycleNote}</div>
+                <div style="display:flex; gap:6px; margin-top:8px; justify-content:flex-end;">
+                  <button type="button" class="audit-btn" onclick="openAuditRawModal('${e.id}')">Edit Setup</button>
+                  <button type="button" class="audit-btn danger" onclick="deleteRawEntry('${e.id}')">Hapus</button>
+                </div>
               </div>
             `;
           }).join("");
@@ -1560,9 +1935,7 @@ HTML_PORTFOLIO = """
               <span>Equity Curve (Kumulatif Permanen)</span>
               <span class="q-pill pill-green">1.00 LOT BASIS</span>
             </div>
-            <div style="height: 170px; width: 100%;">
-              <canvas id="equityCanvas"></canvas>
-            </div>
+            <div id="equityChartWrap" style="height: 170px; width: 100%;"></div>
           </div>
 
           <div class="q-card">
@@ -1573,7 +1946,7 @@ HTML_PORTFOLIO = """
             </div>
             <div class="cal-grid" id="pnlCalendarGrid"></div>
             <div id="dayDetailBox" style="margin-top:12px; padding-top:10px; border-top:1px solid #1e1e1e; font-size:0.78rem; color:var(--text-muted);">
-              Ketuk kotak tanggal untuk melihat rincian profit/loss harian.
+              Ketuk kotak tanggal untuk melihat &amp; mengaudit rincian profit/loss harian.
             </div>
           </div>
 
@@ -1635,23 +2008,33 @@ TF_RULES = {
 }
 
 
-def detect_pip_value(pair: str, entry: float):
-    pair = pair.upper()
-    if "XAU" in pair:
+def detect_pip_value(pair: str) -> float:
+    p = pair.upper().strip()
+    if "XAU" in p:
         return 0.1
-    elif "JPY" in pair:
+    if "JPY" in p:
         return 0.01
-    else:
-        decimals = len(str(entry).split('.')[-1]) if '.' in str(entry) else 0
-        return 0.0001 if decimals >= 4 else 0.01
+    return 0.0001
 
 
-def calculate_sl_tp(pair, side, entry, rr):
-    pair = pair.upper()
-    rule = TF_RULES.get(pair, {"vp": 1, "min_sl": 20, "max_sl": 200})
-    pv = detect_pip_value(pair, entry)
+def price_decimals_for(pair: str) -> int:
+    p = pair.upper().strip()
+    if "XAU" in p:
+        return 2
+    if "JPY" in p:
+        return 3
+    return 5
 
-    sl_pips = rule["max_sl"] / 3
+
+def calculate_sl_tp(pair: str, side: str, entry: float, rr: float):
+    pair = pair.upper().strip()
+    if pair not in TF_RULES:
+        return None
+    rule = TF_RULES[pair]
+    pv = detect_pip_value(pair)
+    dec = price_decimals_for(pair)
+
+    sl_pips = rule["max_sl"] / 3.0
     tp_pips = sl_pips * rr
 
     sl_distance = sl_pips * pv
@@ -1671,8 +2054,8 @@ def calculate_sl_tp(pair, side, entry, rr):
         "pair": pair,
         "side": side,
         "entry": entry,
-        "sl": round(sl, 5),
-        "tp": round(tp, 5),
+        "sl": round(sl, dec),
+        "tp": round(tp, dec),
         "sl_pips": round(sl_pips, 1),
         "tp_pips": round(tp_pips, 1),
         "rr": rr,
